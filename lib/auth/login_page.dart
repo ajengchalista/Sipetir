@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:sipetir/admin/dashboard/dashboard_admin_page.dart';
 import 'package:sipetir/peminjam/peminjam.dart';
-import 'package:sipetir/petugas/petugas.dart';
+import 'package:sipetir/petugas/dashboard/dashboard_petugas_page.dart';
+import 'package:sipetir/petugas/dashboard/dashboard_petugas_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
-import '../widgets/login_card.dart';
+import '../auth/widgets/login_card.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -41,7 +44,13 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
-      if (role == 'petugas') {
+      if (role == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
+        );
+      } 
+      else if (role == 'petugas') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DashboardPetugasPage()),
@@ -50,7 +59,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (_) => const PeminjamanPage()),
+              builder: (_) => const DashboardPeminjamPage()),
         );
       }
     } catch (e) {

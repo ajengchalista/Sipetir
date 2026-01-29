@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
-import 'pages/login_page.dart';
+import 'package:sipetir/admin/dashboard/dashboard_admin_page.dart';
+import 'package:sipetir/admin/kategori/kategori_screen.dart';
+import 'package:sipetir/admin/peminjaman/peminjaman_page.dart';
+import 'package:sipetir/admin/pengembalian/pengembalian_page.dart';
+import 'package:sipetir/admin/users/manajemen_user.dart';
+import 'package:sipetir/peminjam/peminjam.dart';
+import 'package:sipetir/petugas/dashboard/dashboard_petugas_page.dart';
+import 'admin/alat/alat_page.dart';
+import 'auth/login_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,11 +25,19 @@ void main() async{
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  @override
+ @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LoginPage(),
+      title: 'SIPETIR',
+      theme: ThemeData(
+        primarySwatch: Colors.orange,
+        useMaterial3: true,
+      ),
+      
+      home: const  DashboardPeminjamPage
+ 
+(), 
     );
   }
 }

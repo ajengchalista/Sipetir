@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class HeaderCustom extends StatelessWidget {
   final String title;
-  final String? subtitle; // Subtitle bersifat opsional
+  final String? subtitle;
 
   const HeaderCustom({
     super.key,
@@ -15,49 +15,29 @@ class HeaderCustom extends StatelessWidget {
     return ClipPath(
       clipper: HeaderClipper(),
       child: Container(
-        height: 170, // Sesuaikan tinggi header
+        height: 170,
         width: double.infinity,
-        color: const Color(0xFFFF7A21), // Warna oranye utama
+        color: const Color(0xFFFF7A21),
         padding: const EdgeInsets.only(left: 25, top: 60),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Jika ada subtitle, tampilkan icon back (opsional, sesuaikan kebutuhan)
-            if (subtitle == null)
-              Row(
-                children: [
-                  const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            if (subtitle != null)
+              Text(
+                subtitle!,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
               ),
           ],
         ),
@@ -66,15 +46,16 @@ class HeaderCustom extends StatelessWidget {
   }
 }
 
-// Clipper tetap berada di sini agar menyatu dengan widget headernya
+/// CLIPPER WAJIB ADA DI SINI
 class HeaderClipper extends CustomClipper<Path> {
   @override
-  Path getPath(Size size) {
+  Path getClip(Size size) {
     Path path = Path();
     path.lineTo(0, size.height - 40);
     path.quadraticBezierTo(0, size.height, 40, size.height);
     path.lineTo(size.width - 40, size.height);
-    path.quadraticBezierTo(size.width, size.height, size.width, size.height - 40);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 40);
     path.lineTo(size.width, 0);
     path.close();
     return path;
@@ -82,10 +63,4 @@ class HeaderClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
-  
-  @override
-  Path getClip(Size size) {
-    // TODO: implement getClip
-    throw UnimplementedError();
-  }
 }
