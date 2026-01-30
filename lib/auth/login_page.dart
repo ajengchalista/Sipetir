@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:sipetir/admin/dashboard/dashboard_admin_page.dart';
-import 'package:sipetir/peminjam/peminjam.dart';
-import 'package:sipetir/petugas/dashboard/dashboard_petugas_page.dart';
+import 'package:sipetir/peminjam/dashboard/peminjam.dart';
 import 'package:sipetir/petugas/dashboard/dashboard_petugas_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
 import '../auth/widgets/login_card.dart';
-
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,11 +18,17 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleLogin() async {
     setState(() => _isLoading = true);
     try {
-      final response =
-          await Supabase.instance.client.auth.signInWithPassword(
+      final response = await Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
@@ -39,7 +43,6 @@ class _LoginPageState extends State<LoginPage> {
           .maybeSingle();
 
       if (userData == null) throw Exception();
-
       final role = userData['role'];
 
       if (!mounted) return;
@@ -49,8 +52,7 @@ class _LoginPageState extends State<LoginPage> {
           context,
           MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
         );
-      } 
-      else if (role == 'petugas') {
+      } else if (role == 'petugas') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DashboardPetugasPage()),
@@ -58,43 +60,63 @@ class _LoginPageState extends State<LoginPage> {
       } else if (role == 'penyewa') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-              builder: (_) => const DashboardPeminjamPage()),
+          MaterialPageRoute(builder: (_) => const DashboardPeminjamPage()),
         );
       }
     } catch (e) {
       _showErrorBanner();
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showErrorBanner() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Terjadi kesalahan / Data tidak sesuai"),
-      ),
+      const SnackBar(content: Text("Terjadi kesalahan / Data tidak sesuai")),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Menggunakan LayoutBuilder untuk mendapatkan ukuran layar yang presisi
     return Scaffold(
       backgroundColor: AppColors.softBackground,
-      body: Column(
-        children: [
-          const SizedBox(height: 80),
-          Image.asset('assets/images/logo.png', height: 140),
-          const Spacer(),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            // Memastikan konten bisa di-scroll jika layar sangat pendek (misal hp lama)
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: constraints.maxHeight * 0.1,
+                    ), // Jarak 10% dari atas
+                    // Logo dibuat responsive (maksimal 25% dari tinggi layar)
+                    Image.asset(
+                      'assets/images/logo.png',
+                      height: constraints.maxHeight * 0.25,
+                      fit: BoxFit.contain,
+                    ),
 
-          /// ⬇️ KIRIM CONTROLLER & FUNCTION
-          LoginCard(
-            emailController: _emailController,
-            passwordController: _passwordController,
-            onLogin: _handleLogin,
-            isLoading: _isLoading,
-          ),
-        ],
+                    // Spacer diganti dengan Expanded agar LoginCard menempel di bawah
+                    const Expanded(child: SizedBox(height: 20)),
+
+                    /// LOGIN CARD
+                    // Tetap menggunakan widget LoginCard kamu tanpa mengubah isinya
+                    LoginCard(
+                      emailController: _emailController,
+                      passwordController: _passwordController,
+                      onLogin: _handleLogin,
+                      isLoading: _isLoading,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

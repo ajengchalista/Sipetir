@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sipetir/widgets/header_custom.dart';
-import 'package:sipetir/petugas/widgets/petugas_navbar.dart';
+import 'package:sipetir/petugas/laporan/laporan_page.dart';
 
 class PetugasBottomNavbar extends StatelessWidget {
   final int currentIndex;
@@ -16,10 +15,22 @@ class PetugasBottomNavbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
-      onTap: onTap,
-      type: BottomNavigationBarType.fixed, // Supaya label tetap muncul semua
+      // Logika OnTap diperbaiki di sini
+      onTap: (index) {
+        if (index == 3) {
+          // Jika tab Laporan (index 3) diklik, langsung pindah halaman
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LaporanPage()),
+          );
+        } else {
+          // Jika tab lain, jalankan fungsi onTap bawaan (ganti index)
+          onTap(index);
+        }
+      },
+      type: BottomNavigationBarType.fixed,
       backgroundColor: Colors.white,
-      selectedItemColor: const Color(0xFFFF7A21), // Orange sesuai gambar
+      selectedItemColor: const Color(0xFFFF7A21),
       unselectedItemColor: Colors.grey,
       items: const [
         BottomNavigationBarItem(
@@ -35,7 +46,7 @@ class PetugasBottomNavbar extends StatelessWidget {
           label: 'Pengembalian',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.history_toggle_off_rounded),
+          icon: Icon(Icons.description_outlined),
           label: 'Laporan',
         ),
       ],

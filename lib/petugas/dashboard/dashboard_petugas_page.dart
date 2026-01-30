@@ -28,10 +28,8 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
         children: [
           // Header Custom tetap di atas
           const HeaderCustom(title: 'Dashboard', subtitle: 'Petugas'),
-          
-          Expanded(
-            child: _buildBodyContent(),
-          ),
+
+          Expanded(child: _buildBodyContent()),
         ],
       ),
     );
@@ -65,12 +63,21 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
           const SizedBox(height: 20),
           _buildStatCards(),
           const SizedBox(height: 25),
-          const Text('Pemberitahuan Terbaru', 
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
+          const Text(
+            'Pemberitahuan Terbaru',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFFF7A21),
+            ),
+          ),
           const SizedBox(height: 15),
           _buildGeneralCard(status: 'pending'), // Card tombol
           _buildGeneralCard(status: 'Disetujui'), // Card label orange
-          _buildGeneralCard(status: 'Ditolak', reason: 'Alat sedang dalam perbaikan'), // Card label merah
+          _buildGeneralCard(
+            status: 'Ditolak',
+            reason: 'Alat sedang dalam perbaikan',
+          ), // Card label merah
           const SizedBox(height: 30),
         ],
       ),
@@ -87,8 +94,14 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Persetujuan Peminjaman', 
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
+              child: Text(
+                'Persetujuan Peminjaman',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFF7A21),
+                ),
+              ),
             ),
           ),
           const TabBar(
@@ -123,14 +136,21 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
       children: [
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-          child: Text('Daftar Pengembalian', 
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
+          child: Text(
+            'Daftar Pengembalian',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFFF7A21),
+            ),
+          ),
         ),
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             itemCount: 4,
-            itemBuilder: (context, index) => _buildGeneralCard(status: 'pengembalian'),
+            itemBuilder: (context, index) =>
+                _buildGeneralCard(status: 'pengembalian'),
           ),
         ),
       ],
@@ -174,7 +194,13 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFFFFB385)),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -183,10 +209,23 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -217,7 +256,13 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFFFB385)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,37 +270,74 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
           Row(
             children: [
               Container(
-                width: 45, height: 45,
-                decoration: const BoxDecoration(color: Color(0xFFFFE5D1), shape: BoxShape.circle),
-                child: const Center(child: Text('AF', style: TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold))),
+                width: 45,
+                height: 45,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFE5D1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Text(
+                    'AF',
+                    style: TextStyle(
+                      color: Color(0xFFFF7A21),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Kun Fayakun', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('XII', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                    Text(
+                      'Kun Fayakun',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      'XII',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
                   ],
                 ),
               ),
-              const Text('22 Jan 2026', style: TextStyle(color: Colors.grey, fontSize: 11)),
+              const Text(
+                '22 Jan 2026',
+                style: TextStyle(color: Colors.grey, fontSize: 11),
+              ),
             ],
           ),
           const SizedBox(height: 15),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-            decoration: BoxDecoration(color: const Color(0xFFFFE5D1), borderRadius: BorderRadius.circular(15)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE5D1),
+              borderRadius: BorderRadius.circular(15),
+            ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Seragam APD K3', style: TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold)),
-                Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFFF7A21)),
+                Text(
+                  'Seragam APD K3',
+                  style: TextStyle(
+                    color: Color(0xFFFF7A21),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Color(0xFFFF7A21),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 15),
-          
+
           // DINAMIS: Tombol atau Label Status
           if (status == 'pending')
             _buildActionButtons()
@@ -271,23 +353,96 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
   Widget _buildActionButtons() {
     return Row(
       children: [
-        Expanded(child: OutlinedButton(onPressed: () {}, style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFFF7A21)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: const Text('Tolak', style: TextStyle(color: Color(0xFFFF7A21))))),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () {},
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFFFF7A21)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Tolak',
+              style: TextStyle(color: Color(0xFFFF7A21)),
+            ),
+          ),
+        ),
         const SizedBox(width: 15),
-        Expanded(child: ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7A21), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: const Text('Setujui', style: TextStyle(color: Colors.white)))),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF7A21),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Setujui', style: TextStyle(color: Colors.white)),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildReturnButton() {
-    return SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7A21), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 15)), child: const Text('Konfirmasi Pengembalian', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))));
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFF7A21),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 15),
+        ),
+        child: const Text(
+          'Konfirmasi Pengembalian',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
   }
 
-  Widget _buildStatusLabel(String status, Color bg, Color text, String? reason) {
+  Widget _buildStatusLabel(
+    String status,
+    Color bg,
+    Color text,
+    String? reason,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)), child: Center(child: Text(status, style: TextStyle(color: text, fontWeight: FontWeight.bold, fontSize: 16)))),
-        if (reason != null) ...[const SizedBox(height: 10), Text(reason, style: const TextStyle(color: Color(0xFFF44336), fontSize: 12, fontWeight: FontWeight.bold))],
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: Text(
+              status,
+              style: TextStyle(
+                color: text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        if (reason != null) ...[
+          const SizedBox(height: 10),
+          Text(
+            reason,
+            style: const TextStyle(
+              color: Color(0xFFF44336),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ],
     );
   }
