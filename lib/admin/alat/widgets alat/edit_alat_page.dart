@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditAlatPage extends StatefulWidget {
-  final Map<String, String> data;
+  final Map<String, dynamic> data;
 
   const EditAlatPage({super.key, required this.data});
 
@@ -10,210 +11,123 @@ class EditAlatPage extends StatefulWidget {
 }
 
 class _EditAlatPageState extends State<EditAlatPage> {
+  final SupabaseClient supabase = Supabase.instance.client;
   late TextEditingController _namaController;
   late TextEditingController _kodeController;
-  String? _selectedKategori;
+  
+  // Jika relasi kategori menggunakan ID (int), ubah String? menjadi int?
+  dynamic _selectedKategoriId; 
 
-  // Daftar kategori sesuai kebutuhan aplikasi
-  final List<String> _kategoriList = [
-    'Alat Ukur Listrik',
-    'Peralatan Mekanik',
-    'Alat Analisis & Quality check',
-    'Keselamatan Kerja (K3)',
+  // Contoh list kategori (ID harus sesuai dengan yang ada di tabel relasi Kategori kamu)
+  final List<Map<String, dynamic>> _kategoriOptions = [
+    {'id': 1, 'nama': 'Peralatan'},
+    {'id': 2, 'nama': 'Alat Ukur Listrik'},
+    {'id': 3, 'nama': 'Peralatan Mekanik'},
+    {'id': 4, 'nama': 'Alat Analisis & Quality check'},
+    {'id': 5, 'nama': 'Keselamatan Kerja (K3)'},
   ];
 
   @override
   void initState() {
     super.initState();
-    // Inisialisasi controller dengan data yang sudah ada
-    _namaController = TextEditingController(text: widget.data['title']);
-    _kodeController = TextEditingController(text: widget.data['itemCode']);
-    _selectedKategori = widget.data['category'];
+    _namaController = TextEditingController(text: widget.data['nama_barang']?.toString() ?? '');
+    _kodeController = TextEditingController(text: widget.data['kode_alat']?.toString() ?? '');
+    
+    // Ambil ID kategori dari data yang dikirim
+    _selectedKategoriId = widget.data['id_kategori'] ?? widget.data['kategori_id'];
   }
 
-  @override
-  void dispose() {
-    _namaController.dispose();
-    _kodeController.dispose();
-    super.dispose();
+  Future<void> _updateAlat() async {
+    try {
+      // PERHATIKAN: Nama kolom relasi di tabel Alat biasanya diawali 'id_' atau 'kategori_id'
+      await supabase.from('Alat').update({
+        'nama_barang': _namaController.text.trim(),
+        'kode_alat': _kodeController.text.trim(),
+        'id_kategori': _selectedKategoriId, // Kirim ID, bukan teks nama kategori
+      }).eq('alat_id', widget.data['alat_id']); 
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Alat berhasil diperbarui'), backgroundColor: Color(0xFFF0822D)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal: Pastikan nama kolom relasi benar ($e)"), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom, // Handle keyboard
-      ),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF9EFE5),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(25.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Edit Alat',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFF0822D),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Input Nama Alat
-            _buildLabel('Nama Alat'),
-            _buildTextField(_namaController, 'Masukkan Nama Alat'),
-
-            const SizedBox(height: 15),
-
-            // Input Kode Alat
-            _buildLabel('Kode Alat'),
-            _buildTextField(_kodeController, 'Masukkan Kode Alat'),
-
-            const SizedBox(height: 15),
-
-            // Dropdown Kategori
-            _buildLabel('Kategori'),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.orange.withOpacity(0.5)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedKategori,
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_drop_down, color: Colors.orange),
-                  items: _kategoriList.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedKategori = newValue;
-                    });
-                  },
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            // Tombol Batal & Simpan
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      side: const BorderSide(color: Color(0xFFF0822D)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: const Text(
-                      'Batal',
-                      style: TextStyle(
-                        color: Color(0xFFF0822D),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // 1. Validasi Input
-                      if (_namaController.text.trim().isEmpty ||
-                          _kodeController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Nama dan Kode alat tidak boleh kosong!',
-                            ),
-                            backgroundColor: Colors.redAccent,
-                          ),
-                        );
-                        return;
-                      }
-
-                      // 2. Kirim data kembali ke halaman Manajemen Alat
-                      Navigator.pop(context, {
-                        'title': _namaController.text,
-                        'itemCode': _kodeController.text,
-                        'category':
-                            _selectedKategori ?? widget.data['category']!,
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      backgroundColor: const Color(0xFFF0822D),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: const Text(
-                      'Simpan',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+      margin: const EdgeInsets.all(15), 
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      decoration: BoxDecoration(color: const Color(0xFFF9EFE5), borderRadius: BorderRadius.circular(40)),
+      child: SingleChildScrollView( 
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 35.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Edit Alat', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFFF0822D))),
+              const SizedBox(height: 25),
+              _buildLabel('Nama Alat'),
+              _buildTextField(_namaController),
+              const SizedBox(height: 20),
+              _buildLabel('Kode Alat'),
+              _buildTextField(_kodeController),
+              const SizedBox(height: 20),
+              _buildLabel('Kategori (Relasi)'),
+              _buildDropdown(),
+              const SizedBox(height: 40),
+              _buildButtons(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Widget Helper untuk Label
-  Widget _buildLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontWeight: FontWeight.w500,
-          color: Colors.black87,
+  Widget _buildDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFF0822D).withOpacity(0.6), width: 1.5),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<dynamic>(
+          value: _selectedKategoriId,
+          isExpanded: true,
+          hint: const Text("Pilih Kategori"),
+          items: _kategoriOptions.map((cat) {
+            return DropdownMenuItem(
+              value: cat['id'],
+              child: Text(cat['nama']),
+            );
+          }).toList(),
+          onChanged: (v) => setState(() => _selectedKategoriId = v),
         ),
       ),
     );
   }
 
-  // Widget Helper untuk TextField
-  Widget _buildTextField(TextEditingController controller, String hint) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 15,
-          vertical: 15,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(color: Colors.orange.withOpacity(0.5)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(color: Colors.orange),
-        ),
-      ),
+  // ... Widget _buildButtons, _buildLabel, dan _buildTextField tetap sama seperti sebelumnya ...
+  Widget _buildButtons() {
+    return Row(
+      children: [
+        Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Batal'))),
+        const SizedBox(width: 15),
+        Expanded(child: ElevatedButton(onPressed: _updateAlat, child: const Text('Simpan'))),
+      ],
     );
   }
+  
+  Widget _buildLabel(String label) => Text(label, style: const TextStyle(fontWeight: FontWeight.bold));
+  Widget _buildTextField(TextEditingController ctrl) => TextField(controller: ctrl);
 }

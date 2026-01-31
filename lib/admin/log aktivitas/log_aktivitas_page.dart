@@ -66,7 +66,7 @@ class _LogAktivitasPageState extends State<LogAktivitasPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Daftar Peminjaman',
+                    'Aktivitas Terkini',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
