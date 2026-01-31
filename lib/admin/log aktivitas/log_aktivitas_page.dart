@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sipetir/widgets/header_custom.dart';
 import 'package:sipetir/admin/widgets/bottom_navbar.dart';
+import 'package:sipetir/admin/halaman profil/profil_page.dart'; // ✅ TAMBAHAN
 
 class LogAktivitasPage extends StatefulWidget {
   const LogAktivitasPage({super.key});
@@ -19,19 +20,40 @@ class _LogAktivitasPageState extends State<LogAktivitasPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // HEADER KEMBALI KE STRUKTUR AWAL YANG STABIL
+          // HEADER
           Stack(
             children: [
-              const HeaderCustom(
-                title: 'Log Aktivitas',
-                subtitle: '',
-              ),
+              const HeaderCustom(title: 'Log Aktivitas', subtitle: ''),
+
+              // ICON BACK (TETAP)
               Positioned(
-                top: 50, // Posisi standard agar sejajar di area header
+                top: 50,
                 left: 10,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.white,
+                  ),
                   onPressed: () => Navigator.pop(context),
+                ),
+              ),
+
+              // ICON PROFIL (DITAMBAHKAN, DISAMAKAN DENGAN HALAMAN LAIN)
+              Positioned(
+                top: 50,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.account_circle_outlined,
+                    color: Colors.white,
+                    size: 35,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilPage()),
+                    );
+                  },
                 ),
               ),
             ],
@@ -70,7 +92,8 @@ class _LogAktivitasPageState extends State<LogAktivitasPage> {
                   _buildLogCard(
                     user: 'Admin',
                     date: '22 Jan 2026, 15.20',
-                    desc: 'Menyetujui pengembalian alat dari peminjaman #pmk-007 (kondisi baik)',
+                    desc:
+                        'Menyetujui pengembalian alat dari peminjaman #pmk-007 (kondisi baik)',
                     label: 'Dibuat',
                     tag: 'Alat',
                   ),
@@ -80,6 +103,7 @@ class _LogAktivitasPageState extends State<LogAktivitasPage> {
           ),
         ],
       ),
+
       bottomNavigationBar: AdminBottomNavbar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -122,36 +146,79 @@ class _LogAktivitasPageState extends State<LogAktivitasPage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(user, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  Text(date, style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w500)),
+                  Text(
+                    user,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    date,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFBB074),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 15),
-          Text(desc, style: const TextStyle(color: Colors.black54, fontSize: 14, height: 1.4)),
+          Text(
+            desc,
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.bottomRight,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Data : ', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                const Text(
+                  'Data : ',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade100,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: Text(tag, style: const TextStyle(color: Color(0xFFF58220), fontSize: 11, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    tag,
+                    style: const TextStyle(
+                      color: Color(0xFFF58220),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),

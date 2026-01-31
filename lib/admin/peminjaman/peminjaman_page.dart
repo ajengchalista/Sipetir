@@ -1,8 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:sipetir/admin/halaman%20profil/profil_page.dart';
+import 'package:sipetir/admin/widgets/bottom_navbar.dart';
 import 'package:sipetir/widgets/header_custom.dart';
+import 'package:sipetir/admin/dashboard/dashboard_admin_page.dart';
+import 'package:sipetir/admin/alat/alat_page.dart';
+import 'package:sipetir/admin/pengembalian/pengembalian_page.dart';
 
-class PeminjamanPage extends StatelessWidget {
+class PeminjamanPage extends StatefulWidget {
   const PeminjamanPage({super.key});
+
+  @override
+  State<PeminjamanPage> createState() => _PeminjamanPageState();
+}
+
+class _PeminjamanPageState extends State<PeminjamanPage> {
+  // Index 2 karena 'Peminjaman' berada di urutan ketiga pada AdminBottomNavbar
+  int _currentIndex = 2;
+
+  void _onNavbarTapped(int index) {
+    if (index == _currentIndex)
+      return; // Jangan pindah jika sudah di halaman yang sama
+
+    setState(() {
+      _currentIndex = index;
+    });
+
+    // LOGIKA NAVIGASI AKTIF (Tanpa merubah UI)
+    switch (index) {
+      case 0:
+        // Memanggil class dari dashboard_admin_page.dart
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardAdminPage()),
+        );
+        break;
+      case 1:
+        // Memanggil class dari alat_page.dart
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ManajemenAlatPage()),
+        );
+        break;
+      case 2:
+        // Sudah berada di halaman Peminjaman
+        break;
+      case 3:
+        // Memanggil class dari pengembalian_page.dart
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const PengembalianPage()),
+        );
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,14 +60,37 @@ class PeminjamanPage extends StatelessWidget {
       backgroundColor: const Color(0xFFFFF1E6),
       body: Column(
         children: [
-          // HEADER
-          const HeaderCustom(
-            title: 'Manajemen Peminjaman',
+          Stack(
+            children: [
+              const HeaderCustom(title: 'Peminjaman', subtitle: 'admin'),
+              Positioned(
+                top: 50, // Menyesuaikan area status bar
+                right: 20,
+                child: GestureDetector(
+                  onTap: () {
+                    // NAVIGASI KE HALAMAN PROFIL
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilPage()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: Colors.white24, // Efek transparan halus
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.account_circle_outlined,
+                      color: Colors.white,
+                      size: 35,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-
-          const SizedBox(height: 20),
-
-          // SEARCH & TITLE
+          // --- SEARCH & TITLE ---
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
@@ -35,16 +108,32 @@ class PeminjamanPage extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Cari Nama Alat / kode alat',
-                          prefixIcon: const Icon(Icons.search),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide.none,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Cari Nama Alat / kode alat',
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.grey,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
                         ),
                       ),
@@ -55,9 +144,16 @@ class PeminjamanPage extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: const Icon(Icons.tune, color: Color(0xFFFF7A21)),
-                    )
+                    ),
                   ],
                 ),
               ],
@@ -66,7 +162,7 @@ class PeminjamanPage extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // LIST CARD
+          // --- LIST CARD ---
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -78,7 +174,7 @@ class PeminjamanPage extends StatelessWidget {
                   tglPinjam: '22 Jan 2026',
                   tglKembali: '23 Jan 2026',
                   status: 'Dipinjam',
-                  statusColor: Color(0xFFFF7A21),
+                  statusColor: const Color(0xFFFF7A21),
                 ),
                 _buildBorrowCard(
                   id: '#pmjkla-002',
@@ -87,12 +183,35 @@ class PeminjamanPage extends StatelessWidget {
                   tglPinjam: '22 Jan 2026',
                   tglKembali: '23 Jan 2026',
                   status: 'Terlambat',
-                  statusColor: Color(0xFFFF8A8A),
+                  statusColor: const Color(0xFFFF8A8A),
                 ),
+                const SizedBox(
+                  height: 80,
+                ), // Memberi ruang agar tidak tertutup navbar
               ],
             ),
           ),
         ],
+      ),
+
+      // --- BOTTOM NAVIGATION BAR ---
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          child: AdminBottomNavbar(
+            currentIndex: _currentIndex,
+            onTap: _onNavbarTapped,
+          ),
+        ),
       ),
     );
   }
@@ -125,15 +244,30 @@ class PeminjamanPage extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(id, style: const TextStyle(color: Color(0xFFFF7A21), fontSize: 12)),
-              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                id,
+                style: const TextStyle(color: Color(0xFFFF7A21), fontSize: 12),
+              ),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
               Text(kelas, style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Pinjam: $tglPinjam'),
-                  Text('Kembali: $tglKembali'),
+                  Text(
+                    'Pinjam: $tglPinjam',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  Text(
+                    'Kembali: $tglKembali',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ],
               ),
             ],
@@ -149,10 +283,14 @@ class PeminjamanPage extends StatelessWidget {
               ),
               child: Text(
                 status,
-                style: const TextStyle(color: Colors.white, fontSize: 10),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

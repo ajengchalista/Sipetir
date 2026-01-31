@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:sipetir/admin/alat/alat_page.dart';
 import 'package:sipetir/admin/dashboard/dashboard_admin_page.dart';
+import 'package:sipetir/admin/halaman profil/profil_page.dart';
 import 'package:sipetir/admin/peminjaman/peminjaman_page.dart';
 import 'package:sipetir/admin/widgets/bottom_navbar.dart';
+import 'package:sipetir/widgets/header_custom.dart';
 
 class PengembalianPage extends StatefulWidget {
   const PengembalianPage({super.key});
@@ -19,15 +21,25 @@ class _PengembalianPageState extends State<PengembalianPage> {
 
   void _onNavTapped(int index) {
     if (_currentIndex == index) return;
+
     switch (index) {
       case 0:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardAdminPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
+        );
         break;
       case 1:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManajemenAlatPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ManajemenAlatPage()),
+        );
         break;
       case 2:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PeminjamanPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PeminjamanPage()),
+        );
         break;
       case 3:
         break;
@@ -38,28 +50,45 @@ class _PengembalianPageState extends State<PengembalianPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bg,
-      appBar: AppBar(
-        backgroundColor: orange,
-        elevation: 0,
-        toolbarHeight: 70,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Pengembalian',
-          style: TextStyle(
-              color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 15.0),
-            child: Icon(Icons.account_circle_outlined, color: Colors.white, size: 35),
-          )
-        ],
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(35)),
+
+      // ================= HEADER =================
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(170),
+        child: Stack(
+          children: [
+            const HeaderCustom(title: 'Pengembalian', subtitle: 'admin'),
+
+            Positioned(
+              top: 50,
+              right: 20,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfilPage()),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: const BoxDecoration(
+                    color: Colors.white24,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.account_circle_outlined,
+                    color: Colors.white,
+                    size: 35,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+
+      // ================= BODY =================
+      body: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             // SEARCH BAR
@@ -79,35 +108,44 @@ class _PengembalianPageState extends State<PengembalianPage> {
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
 
-            const PengembalianCard(
-              kode: '#AL-001',
-              nama: 'Sarung Tangan Listrik',
-              status: 'Baik',
-              statusColor: Colors.green,
-              denda: 'Tanpa Denda',
-              tglKembali: '22 Jan 2026',
-            ),
-            const PengembalianCard(
-              kode: '#AL-002',
-              nama: 'Megger (Insulation Tester)',
-              status: 'Rusak',
-              statusColor: Colors.red,
-              denda: 'Denda : 35.000',
-              tglKembali: '22 Jan 2026',
-            ),
-            const PengembalianCard(
-              kode: '#AL-009',
-              nama: 'pH Meter',
-              status: 'Baik',
-              statusColor: Colors.green,
-              denda: 'Tanpa Denda',
-              tglKembali: '22 Jan 2026',
+            Expanded(
+              child: ListView(
+                children: const [
+                  PengembalianCard(
+                    kode: '#AL-001',
+                    nama: 'Sarung Tangan Listrik',
+                    status: 'Baik',
+                    statusColor: Colors.green,
+                    denda: 'Tanpa Denda',
+                    tglKembali: '22 Jan 2026',
+                  ),
+                  PengembalianCard(
+                    kode: '#AL-002',
+                    nama: 'Megger (Insulation Tester)',
+                    status: 'Rusak',
+                    statusColor: Colors.red,
+                    denda: 'Denda : 35.000',
+                    tglKembali: '22 Jan 2026',
+                  ),
+                  PengembalianCard(
+                    kode: '#AL-009',
+                    nama: 'pH Meter',
+                    status: 'Baik',
+                    statusColor: Colors.green,
+                    denda: 'Tanpa Denda',
+                    tglKembali: '22 Jan 2026',
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
+
+      // ================= BOTTOM NAV =================
       bottomNavigationBar: AdminBottomNavbar(
         currentIndex: _currentIndex,
         onTap: _onNavTapped,
@@ -115,6 +153,10 @@ class _PengembalianPageState extends State<PengembalianPage> {
     );
   }
 }
+
+// =======================================================
+// CARD
+// =======================================================
 
 class PengembalianCard extends StatelessWidget {
   final String kode, nama, status, denda, tglKembali;
@@ -143,60 +185,92 @@ class PengembalianCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Kode & Badge Status
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(kode, style: const TextStyle(color: Color(0xFFF37021), fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                kode,
+                style: const TextStyle(
+                  color: Color(0xFFF37021),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
-              )
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             ],
           ),
+
           const SizedBox(height: 12),
-          
-          // Body: Nama Unit & Tanggal
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Unit dikembalikan", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    const SizedBox(height: 2),
-                    Text(nama, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Unit dikembalikan",
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    Text(
+                      nama,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Tgl kembali", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  const SizedBox(height: 2),
-                  Text(tglKembali, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Tgl kembali",
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  Text(
+                    tglKembali,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
+
           const SizedBox(height: 12),
 
-          // Footer: Denda & CRUD Icons
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(denda, 
+              Text(
+                denda,
                 style: TextStyle(
-                  color: denda.contains('Denda') ? Colors.red : Colors.black45, 
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 13
-                )
+                  color: denda.contains('Denda') ? Colors.red : Colors.black45,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
               Row(
                 children: [
@@ -206,7 +280,7 @@ class PengembalianCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   _actionIcon(Icons.delete_outline, Colors.red),
                 ],
-              )
+              ),
             ],
           ),
         ],

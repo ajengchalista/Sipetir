@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sipetir/widgets/header_custom.dart'; 
+import 'package:sipetir/widgets/header_custom.dart';
 import 'package:sipetir/admin/widgets/bottom_navbar.dart';
+import 'package:sipetir/admin/halaman profil/profil_page.dart'; // ✅ TAMBAHAN
 
 class KategoriScreen extends StatefulWidget {
   const KategoriScreen({super.key});
@@ -10,8 +11,7 @@ class KategoriScreen extends StatefulWidget {
 }
 
 class _KategoriScreenState extends State<KategoriScreen> {
-  // 1. Tambahkan variabel untuk menyimpan index navbar
-  int _currentIndex = 0; 
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -19,30 +19,51 @@ class _KategoriScreenState extends State<KategoriScreen> {
       backgroundColor: const Color(0xFFFEF2E8),
       body: Column(
         children: [
-          // Header dengan tombol kembali
+          // HEADER
           Stack(
             children: [
-              const HeaderCustom(
-                title: 'Kategori',
-                subtitle: '', 
-              ),
+              const HeaderCustom(title: 'Kategori', subtitle: ''),
+
+              // ICON BACK
               Positioned(
-                top: 50, 
+                top: 50,
                 left: 10,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.white,
+                  ),
                   onPressed: () => Navigator.pop(context),
+                ),
+              ),
+
+              // ICON PROFIL (NAVIGASI DITAMBAHKAN)
+              Positioned(
+                top: 50,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.account_circle_outlined,
+                    color: Colors.white,
+                    size: 35,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilPage()),
+                    );
+                  },
                 ),
               ),
             ],
           ),
-          
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // --- Search Bar ---
+                  // SEARCH BAR
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 15),
                     decoration: BoxDecoration(
@@ -55,30 +76,39 @@ class _KategoriScreenState extends State<KategoriScreen> {
                         border: InputBorder.none,
                         icon: Icon(Icons.search, color: Colors.orange),
                         hintText: 'Cari Nama kategori / nama alat',
-                        hintStyle: TextStyle(color: Colors.orange, fontSize: 14),
+                        hintStyle: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
 
                   const SizedBox(height: 15),
 
-                  // --- Button Tambah Alat ---
+                  // BUTTON TAMBAH
                   ElevatedButton.icon(
                     onPressed: () {},
                     icon: const Icon(Icons.add_circle, color: Colors.white),
-                    label: const Text('Tambah Alat Baru', 
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    label: const Text(
+                      'tambah kategori baru',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF58220),
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 55),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 25),
 
-                  // --- List Cards ---
                   const CategoryCard(
                     title: 'Alat Ukur Listrik',
                     subtitle: 'Tang Amper, Megger, Watt Meter',
@@ -91,7 +121,8 @@ class _KategoriScreenState extends State<KategoriScreen> {
                   ),
                   const CategoryCard(
                     title: 'Alat Analisis & Quality Check',
-                    subtitle: 'Conductivity Meter, Water Quality Tester, pH Meter',
+                    subtitle:
+                        'Conductivity Meter, Water Quality Tester, pH Meter',
                     count: '4 alat tersedia',
                   ),
                 ],
@@ -100,22 +131,21 @@ class _KategoriScreenState extends State<KategoriScreen> {
           ),
         ],
       ),
-      
-      // 2. Berikan argumen yang diminta oleh AdminBottomNavbar
+
       bottomNavigationBar: AdminBottomNavbar(
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
-          // Tambahkan logika navigasi di sini jika diperlukan
         },
       ),
     );
   }
 }
 
-// Widget CategoryCard tetap sama
+// ================= CATEGORY CARD =================
+
 class CategoryCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -155,19 +185,37 @@ class CategoryCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(subtitle, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFBB074),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: Text(count, style: const TextStyle(color: Colors.white, fontSize: 10)),
+                child: Text(
+                  count,
+                  style: const TextStyle(color: Colors.white, fontSize: 10),
+                ),
               ),
             ],
           ),
@@ -182,7 +230,9 @@ class CategoryCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFF58220),
                     side: const BorderSide(color: Color(0xFFF58220)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
@@ -190,11 +240,20 @@ class CategoryCard extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {},
-                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                  label: const Text('Hapus', style: TextStyle(color: Colors.red)),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.red,
+                  ),
+                  label: const Text(
+                    'Hapus',
+                    style: TextStyle(color: Colors.red),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),

@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:sipetir/admin/users/manajemen_user.dart';
+import 'package:sipetir/admin/users/manajemen_user.dart';
 
 class TambahUserDialog extends StatelessWidget {
   final Color orange;
   final Color bg;
 
-  const TambahUserDialog({
-    super.key,
-    required this.orange,
-    required this.bg,
-  });
+  const TambahUserDialog({super.key, required this.orange, required this.bg});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +33,7 @@ class TambahUserDialog extends StatelessWidget {
             // Input Fields
             _buildLabel("Nama Lengkap"),
             _buildTextField(),
-            
+
             const SizedBox(height: 15),
             _buildLabel("Email"),
             _buildTextField(),
@@ -59,12 +56,18 @@ class TambahUserDialog extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: orange),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
                       'Batal',
-                      style: TextStyle(color: orange, fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        color: orange,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -77,13 +80,19 @@ class TambahUserDialog extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: orange,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,
                     ),
                     child: const Text(
                       'Simpan',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -117,7 +126,10 @@ class TambahUserDialog extends StatelessWidget {
       decoration: InputDecoration(
         filled: true,
         fillColor: const Color(0xFFFFE8D6), // Warna input sesuai gambar
-        contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 15,
+          vertical: 12,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide(color: orange.withOpacity(0.4)),

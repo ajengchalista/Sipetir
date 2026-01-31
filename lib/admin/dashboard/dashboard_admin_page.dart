@@ -6,8 +6,8 @@ import 'package:sipetir/admin/users/manajemen_user.dart';
 import 'package:sipetir/admin/widgets/bottom_navbar.dart';
 import 'package:sipetir/widgets/header_custom.dart';
 import 'package:sipetir/admin/kategori/kategori_screen.dart';
-// 1. TAMBAHKAN IMPORT DISINI
-import 'package:sipetir/admin/log aktivitas/log_aktivitas_page.dart'; 
+import 'package:sipetir/admin/log aktivitas/log_aktivitas_page.dart';
+import 'package:sipetir/admin/halaman profil/profil_page.dart';
 
 class DashboardAdminPage extends StatefulWidget {
   const DashboardAdminPage({super.key});
@@ -30,16 +30,28 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
       case 0:
         break;
       case 1:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManajemenAlatPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ManajemenAlatPage()),
+        );
         break;
       case 2:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PeminjamanPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PeminjamanPage()),
+        );
         break;
       case 3:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PengembalianPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PengembalianPage()),
+        );
         break;
       case 4:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManajemenUserPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ManajemenUserPage()),
+        );
         break;
     }
   }
@@ -51,16 +63,54 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const HeaderCustom(title: 'Dashboard', subtitle: 'Admin'),
+          Stack(
+            children: [
+              const HeaderCustom(title: 'Dashboard', subtitle: 'Admin'),
+              Positioned(
+                top: 50, // Menyesuaikan area status bar
+                right: 20,
+                child: GestureDetector(
+                  onTap: () {
+                    // NAVIGASI KE HALAMAN PROFIL
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilPage()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: Colors.white24, // Efek transparan halus
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.account_circle_outlined,
+                      color: Colors.white,
+                      size: 35,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _statCard(icon: Icons.build, total: '18', label: 'TOTAL ALAT'),
+                  _statCard(
+                    icon: Icons.build,
+                    total: '18',
+                    label: 'TOTAL ALAT',
+                  ),
                   const SizedBox(height: 15),
-                  _statCard(icon: Icons.people, total: '180', label: 'TOTAL USER'),
+                  _statCard(
+                    icon: Icons.people,
+                    total: '180',
+                    label: 'TOTAL USER',
+                  ),
                   const SizedBox(height: 25),
                   const Text(
                     'Akses Cepat',
@@ -71,14 +121,16 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
                     ),
                   ),
                   const SizedBox(height: 15),
-                  
+
                   _menuCard(
                     icon: Icons.person_outline,
                     title: 'User',
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ManajemenUserPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const ManajemenUserPage(),
+                        ),
                       );
                     },
                   ),
@@ -89,19 +141,22 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const KategoriScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const KategoriScreen(),
+                        ),
                       );
                     },
                   ),
 
-                  // 2. BAGIAN YANG DISAMBUNGKAN KE LOG AKTIVITAS
                   _menuCard(
                     icon: Icons.receipt_long_outlined,
                     title: 'Log Aktivitas',
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const LogAktivitasPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const LogAktivitasPage(),
+                        ),
                       );
                     },
                   ),
@@ -118,8 +173,11 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
     );
   }
 
-  // ... (Widget _statCard dan _menuCard tetap sama seperti kodemu)
-  Widget _statCard({required IconData icon, required String total, required String label}) {
+  Widget _statCard({
+    required IconData icon,
+    required String total,
+    required String label,
+  }) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -141,8 +199,18 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(total, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
-              Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(
+                total,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFF7A21),
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             ],
           ),
         ],
@@ -150,7 +218,11 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
     );
   }
 
-  Widget _menuCard({required IconData icon, required String title, required VoidCallback onTap}) {
+  Widget _menuCard({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

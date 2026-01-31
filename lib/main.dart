@@ -7,10 +7,11 @@ import 'package:sipetir/admin/users/manajemen_user.dart';
 import 'package:sipetir/peminjam/dashboard/peminjam.dart';
 import 'package:sipetir/peminjam/manajemen_peminjaman_page.dart';
 import 'package:sipetir/petugas/dashboard/dashboard_petugas_page.dart';
-import 'admin/alat/alat_page.dart';
-import 'auth/login_page.dart';
+import 'package:sipetir/admin/alat/alat_page.dart';
+import 'package:sipetir/auth/login_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'petugas/laporan/laporan_page.dart';
+import 'package:sipetir/petugas/laporan/laporan_page.dart';
+import 'package:sipetir/admin/halaman profil/profil_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,8 +34,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SIPETIR',
       theme: ThemeData(primarySwatch: Colors.orange, useMaterial3: true),
-
-      home: const DashboardPeminjamPage(),
+      // Langsung menggunakan home tanpa routes
+      home: const DashboardAdminPage(),
     );
   }
 }
