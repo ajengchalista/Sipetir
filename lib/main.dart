@@ -34,7 +34,6 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SIPETIR',
       theme: ThemeData(primarySwatch: Colors.orange, useMaterial3: true),
-      // Langsung menggunakan home tanpa routes
       home: const DashboardAdminPage(),
     );
   }

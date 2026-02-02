@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class TambahAlatPage extends StatefulWidget {
-  const TambahAlatPage({super.key, required Color orange, required Color bg});
+  const TambahAlatPage({super.key});
 
   @override
   State<TambahAlatPage> createState() => _TambahAlatPageState();
@@ -142,7 +142,7 @@ class _TambahAlatPageState extends State<TambahAlatPage> {
               : _selectedKategori,
           hint: const Text('Pilih Kategori'),
           isExpanded: true,
-          items: ['Admin', 'Petugas', 'Penyewa']
+          items: ['Alat Listrik', 'Alat Ukur', 'K3']
               .map((val) => DropdownMenuItem(value: val, child: Text(val)))
               .toList(),
           onChanged: (val) => setState(() => _selectedKategori = val!),

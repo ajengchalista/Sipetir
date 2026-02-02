@@ -78,39 +78,51 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Menggunakan LayoutBuilder untuk mendapatkan ukuran layar yang presisi
     return Scaffold(
       backgroundColor: AppColors.softBackground,
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            // Memastikan konten bisa di-scroll jika layar sangat pendek (misal hp lama)
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: IntrinsicHeight(
                 child: Column(
                   children: [
-                    SizedBox(
-                      height: constraints.maxHeight * 0.1,
-                    ), // Jarak 10% dari atas
-                    // Logo dibuat responsive (maksimal 25% dari tinggi layar)
+                    SizedBox(height: constraints.maxHeight * 0.1),
+
                     Image.asset(
                       'assets/images/logo.png',
-                      height: constraints.maxHeight * 0.25,
+                      height: constraints.maxHeight * 0.55,
                       fit: BoxFit.contain,
                     ),
 
-                    // Spacer diganti dengan Expanded agar LoginCard menempel di bawah
-                    const Expanded(child: SizedBox(height: 20)),
+                    Transform.translate(
+                      offset: const Offset(25, -230),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 56),
+                        child: Text(
+                          "Penyewaan Alat Teknisi Pembangkit",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color.fromARGB(221, 255, 91, 3),
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ),
+                    ),
 
-                    /// LOGIN CARD
-                    // Tetap menggunakan widget LoginCard kamu tanpa mengubah isinya
+                    const Expanded(child: SizedBox(height: 40)),
+
                     LoginCard(
                       emailController: _emailController,
                       passwordController: _passwordController,
                       onLogin: _handleLogin,
                       isLoading: _isLoading,
                     ),
+
+                    const SizedBox(height: 30),
                   ],
                 ),
               ),
