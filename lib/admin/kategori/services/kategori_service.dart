@@ -8,7 +8,7 @@ class KategoriService {
     required String keterangan,
   }) async {
     await _supabase.from('kategori').insert({
-      'nama': nama,
+      'nama_kategori': nama, // Diubah dari 'nama' menjadi 'nama_kategori'
       'keterangan': keterangan,
     });
   }

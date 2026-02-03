@@ -34,7 +34,6 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      // Mengambil data alat beserta nama_kategori dari tabel kategori
       final data = await supabase
           .from('Alat')
           .select('*, kategori(nama_kategori)');
@@ -121,76 +120,9 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
                           const SizedBox(height: 20),
                           _buildSearchBox(),
                           const SizedBox(height: 20),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                barrierDismissible: true,
-                                builder: (BuildContext context) =>
-                                    const TambahAlatPage(),
-                              ).then((value) {
-                                if (value == true) _fetchAlat();
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.add_circle,
-                              color: Colors.white,
-                            ),
-                            label: const Text("Tambah Alat Baru"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF58220),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                            ),
-                          ),
+                          _buildAddButton(),
                           const SizedBox(height: 25),
-                          _foundAlat.isEmpty
-                              ? const Center(child: Text("Tidak ada data alat"))
-                              : ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: _foundAlat.length,
-                                  itemBuilder: (_, i) {
-                                    final item = _foundAlat[i];
-
-                                    // PERBAIKAN: Ekstrak String kategori dari Map agar tidak TypeError
-                                    String categoryName = 'Tanpa Kategori';
-                                    if (item['kategori'] != null &&
-                                        item['kategori'] is Map) {
-                                      categoryName =
-                                          item['kategori']['nama_kategori'] ??
-                                          'Tanpa Kategori';
-                                    }
-
-                                    return ItemCard(
-                                      title: item['nama_barang'] ?? '',
-                                      itemCode: item['kode_alat'] ?? '',
-                                      category: categoryName,
-                                      onEdit: () {
-                                        showDialog(
-                                          context: context,
-                                          barrierColor: Colors.black54,
-                                          builder: (context) =>
-                                              EditAlatPage(data: item),
-                                        ).then((value) {
-                                          if (value == true) _fetchAlat();
-                                        });
-                                      },
-                                      onDelete: () async {
-                                        await supabase
-                                            .from('Alat')
-                                            .delete()
-                                            .match({
-                                              'alat_id': item['alat_id'],
-                                            });
-                                        _fetchAlat();
-                                      },
-                                    );
-                                  },
-                                ),
+                          _buildListAlat(),
                         ],
                       ),
                     ),
@@ -204,6 +136,8 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
       ),
     );
   }
+
+  // --- WIDGET HELPER ---
 
   Widget _buildHeader() {
     return Stack(
@@ -286,13 +220,61 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
     );
   }
 
-  // PERBAIKAN SINTAKSIS PENUTUP (Bracket & Parenthesis)
-  Widget _buildStatCard(
-    String value,
-    String label,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildAddButton() {
+    return ElevatedButton.icon(
+      onPressed: () {
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (BuildContext context) => const TambahAlatPage(),
+        ).then((value) {
+          if (value == true) _fetchAlat();
+        });
+      },
+      icon: const Icon(Icons.add_circle, color: Colors.white),
+      label: const Text("Tambah Alat Baru"),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFF58220),
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListAlat() {
+    if (_foundAlat.isEmpty) return const Center(child: Text("Tidak ada data alat"));
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _foundAlat.length,
+      itemBuilder: (_, i) {
+        final item = _foundAlat[i];
+        return ItemCard(
+          title: item['nama_barang'] ?? '',
+          itemCode: item['kode_alat'] ?? '',
+          category: item['kategori']?['nama_kategori'] ?? 'Tanpa Kategori',
+          imageName: item['gambar_url'], 
+          onEdit: () {
+            showDialog(
+              context: context,
+              builder: (context) => EditAlatPage(data: item),
+            ).then((value) {
+              if (value == true) _fetchAlat();
+            });
+          },
+          onDelete: () async {
+            await supabase.from('Alat').delete().match({'alat_id': item['alat_id']});
+            _fetchAlat();
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(String value, String label, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(15),
@@ -334,8 +316,11 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
   }
 }
 
+// --- ITEM CARD DENGAN FIX PATH GAMBAR ---
+
 class ItemCard extends StatelessWidget {
   final String title, itemCode, category;
+  final String? imageName;
   final VoidCallback onEdit, onDelete;
 
   const ItemCard({
@@ -343,70 +328,91 @@ class ItemCard extends StatelessWidget {
     required this.title,
     required this.itemCode,
     required this.category,
+    this.imageName,
     required this.onEdit,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Membersihkan nama file jika ada spasi di awal/akhir
+    String cleanName = imageName?.trim() ?? "tang_ampera.jpeg";
+    // Path aset (PASTIKAN TIDAK DOUBLE ASSETS/)
+    String assetPath = "assets/images/$cleanName";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7F0),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
         border: Border.all(color: const Color(0xFFFBB074), width: 1.5),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            "Kode Alat : $itemCode",
-            style: const TextStyle(color: Colors.black54, fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF58220),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Text(
-                  category,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Container(
+              width: 85,
+              height: 85,
+              color: const Color(0xFFD9D9D9),
+              child: Image.asset(
+                assetPath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  // Log error ke console jika file tidak ditemukan
+                  debugPrint("❌ Gagal muat: $assetPath");
+                  return const Center(
+                    child: Icon(Icons.broken_image, color: Colors.red),
+                  );
+                },
               ),
-              Row(
-                children: [
-                  _actionButton(
-                    Icons.edit_note,
-                    const Color(0xFFFBB074),
-                    onEdit,
-                  ),
-                  const SizedBox(width: 8),
-                  _actionButton(
-                    Icons.delete_outline,
-                    const Color(0xFFF47171),
-                    onDelete,
-                  ),
-                ],
-              ),
-            ],
+            ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  "Kode : $itemCode",
+                  style: const TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF58220),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        category,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        _actionButton(Icons.edit_note, const Color(0xFFFBB074), onEdit),
+                        const SizedBox(width: 8),
+                        _actionButton(Icons.delete_outline, const Color(0xFFF47171), onDelete),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -419,11 +425,11 @@ class ItemCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: color),
         ),
-        child: Icon(icon, color: color, size: 22),
+        child: Icon(icon, color: color, size: 24),
       ),
     );
   }
