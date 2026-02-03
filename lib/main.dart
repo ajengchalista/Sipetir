@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// ADMIN
 import 'package:sipetir/admin/dashboard/dashboard_admin_page.dart';
 import 'package:sipetir/admin/kategori/kategori_screen.dart';
 import 'package:sipetir/admin/peminjaman/peminjaman_page.dart';
 import 'package:sipetir/admin/pengembalian/pengembalian_page.dart';
 import 'package:sipetir/admin/users/manajemen_user.dart';
+import 'package:sipetir/admin/alat/alat_page.dart';
+import 'package:sipetir/admin/halaman profil/profil_page.dart';
+
+// PETUGAS
+import 'package:sipetir/petugas/dashboard/dashboard_petugas_page.dart';
+import 'package:sipetir/petugas/laporan/laporan_page.dart';
+
+// PEMINJAM
 import 'package:sipetir/peminjam/dashboard/peminjam.dart';
 import 'package:sipetir/peminjam/manajemen_peminjaman_page.dart';
-import 'package:sipetir/petugas/dashboard/dashboard_petugas_page.dart';
-import 'package:sipetir/admin/alat/alat_page.dart';
+
+// AUTH
 import 'package:sipetir/auth/login_page.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:sipetir/petugas/laporan/laporan_page.dart';
-import 'package:sipetir/admin/halaman profil/profil_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +42,25 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SIPETIR',
       theme: ThemeData(primarySwatch: Colors.orange, useMaterial3: true),
-      home: const DashboardAdminPage(),
+
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const DashboardAdminPage(),
+
+        '/admin/dashboard': (context) => const DashboardAdminPage(),
+        '/admin/kategori': (context) => const KategoriScreen(),
+        '/admin/peminjaman': (context) => const PeminjamanPage(),
+        '/admin/pengembalian': (context) => const PengembalianPage(),
+        '/admin/users': (context) => const ManajemenUserPage(),
+        '/admin/alat': (context) => const ManajemenAlatPage(),
+        '/admin/profil': (context) => const ProfilPage(),
+
+        '/petugas/dashboard': (context) => const DashboardPetugasPage(),
+        '/petugas/laporan': (context) => const LaporanPage(),
+
+        '/peminjam/dashboard': (context) => const DashboardPeminjamPage(),
+        '/peminjam/manajemen': (context) => const PeminjamanPage(),
+      },
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sipetir/widgets/header_custom.dart';
 import 'package:sipetir/petugas/widgets/petugas_navbar.dart';
+import 'package:sipetir/petugas/halaman profil/profil_page.dart';
 
 class DashboardPetugasPage extends StatefulWidget {
   const DashboardPetugasPage({super.key});
@@ -10,32 +11,60 @@ class DashboardPetugasPage extends StatefulWidget {
 }
 
 class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
-  int _currentIndex = 0; // 0: Dash, 1: Pinjam, 2: Kembali, 3: Laporan
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF1E6), // Background krem
+      backgroundColor: const Color(0xFFFFF1E6),
       bottomNavigationBar: PetugasBottomNavbar(
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
-            _currentIndex = index; // Ganti halaman via navbar
+            _currentIndex = index;
           });
         },
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Header Custom tetap di atas
-          const HeaderCustom(title: 'Dashboard', subtitle: 'Petugas'),
+          // ===== ISI UTAMA (TIDAK DIUBAH) =====
+          Column(
+            children: [
+              const HeaderCustom(title: 'Dashboard', subtitle: 'Petugas'),
+              Expanded(child: _buildBodyContent()),
+            ],
+          ),
 
-          Expanded(child: _buildBodyContent()),
+          // ===== ICON PROFIL (DITUMPAANG, UI AMAN) =====
+          Positioned(
+            top: 38, // posisi aman sesuai header
+            right: 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfilPage()),
+                );
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  color: Color(0xFFFF7A21),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // --- LOGIKA PERGANTIAN HALAMAN ---
   Widget _buildBodyContent() {
     switch (_currentIndex) {
       case 0:
@@ -51,7 +80,7 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
     }
   }
 
-  // --- 1. TAMPILAN DASHBOARD (HOME) ---
+  // ================= DASHBOARD =================
   Widget _buildDashboardView() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -72,19 +101,19 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
             ),
           ),
           const SizedBox(height: 15),
-          _buildGeneralCard(status: 'pending'), // Card tombol
-          _buildGeneralCard(status: 'Disetujui'), // Card label orange
+          _buildGeneralCard(status: 'pending'),
+          _buildGeneralCard(status: 'Disetujui'),
           _buildGeneralCard(
             status: 'Ditolak',
             reason: 'Alat sedang dalam perbaikan',
-          ), // Card label merah
+          ),
           const SizedBox(height: 30),
         ],
       ),
     );
   }
 
-  // --- 2. TAMPILAN PEMINJAMAN (TAB) ---
+  // ================= PEMINJAMAN =================
   Widget _buildPeminjamanView() {
     return DefaultTabController(
       length: 3,
@@ -129,7 +158,7 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
     );
   }
 
-  // --- 3. TAMPILAN PENGEMBALIAN ---
+  // ================= PENGEMBALIAN =================
   Widget _buildPengembalianView() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,8 +186,7 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
     );
   }
 
-  // --- REUSABLE COMPONENTS (SEARCH, STATS, CARD) ---
-
+  // ================= COMPONENT =================
   Widget _buildSearchBar() {
     return TextField(
       decoration: InputDecoration(
@@ -194,13 +222,6 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFFFFB385)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Row(
           children: [
@@ -240,6 +261,7 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
     );
   }
 
+  // ================= CARD =================
   Widget _buildGeneralCard({required String status, String? reason}) {
     Color statusBgColor = const Color(0xFFFFE5D1);
     Color statusTextColor = const Color(0xFFFF7A21);
@@ -256,32 +278,33 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFFFB385)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 45,
-                height: 45,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFE5D1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Text(
-                    'AF',
-                    style: TextStyle(
-                      color: Color(0xFFFF7A21),
-                      fontWeight: FontWeight.bold,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfilPage()),
+                  );
+                },
+                child: Container(
+                  width: 45,
+                  height: 45,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFE5D1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'AF',
+                      style: TextStyle(
+                        color: Color(0xFFFF7A21),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -292,7 +315,7 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Kun Fayakun',
+                      'nana',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -336,114 +359,8 @@ class _DashboardPetugasPageState extends State<DashboardPetugasPage> {
               ],
             ),
           ),
-          const SizedBox(height: 15),
-
-          // DINAMIS: Tombol atau Label Status
-          if (status == 'pending')
-            _buildActionButtons()
-          else if (status == 'pengembalian')
-            _buildReturnButton()
-          else
-            _buildStatusLabel(status, statusBgColor, statusTextColor, reason),
         ],
       ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Color(0xFFFF7A21)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Tolak',
-              style: TextStyle(color: Color(0xFFFF7A21)),
-            ),
-          ),
-        ),
-        const SizedBox(width: 15),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF7A21),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text('Setujui', style: TextStyle(color: Colors.white)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReturnButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {},
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFF7A21),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 15),
-        ),
-        child: const Text(
-          'Konfirmasi Pengembalian',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusLabel(
-    String status,
-    Color bg,
-    Color text,
-    String? reason,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              status,
-              style: TextStyle(
-                color: text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
-        if (reason != null) ...[
-          const SizedBox(height: 10),
-          Text(
-            reason,
-            style: const TextStyle(
-              color: Color(0xFFF44336),
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

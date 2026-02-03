@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sipetir/admin/kategori/widget%20kategori/edit_kategori.dart';
 import 'package:sipetir/widgets/header_custom.dart';
-import 'package:sipetir/admin/widgets/bottom_navbar.dart';
 import 'package:sipetir/admin/halaman profil/profil_page.dart';
-// Import file tambah kategori
 import 'package:sipetir/admin/kategori/widget%20kategori/tambah_kategori_baru.dart';
 
 class KategoriScreen extends StatefulWidget {
@@ -14,10 +12,8 @@ class KategoriScreen extends StatefulWidget {
 }
 
 class _KategoriScreenState extends State<KategoriScreen> {
-  int _currentIndex = 0;
+  final TextEditingController _searchController = TextEditingController();
 
-  // 1. DATA LIST KATEGORI DIUBAH MENJADI STATIC
-  // Agar data tidak reset saat pindah halaman (Navigator push/pop)
   static List<Map<String, String>> categories = [
     {
       'title': 'Alat Ukur Listrik',
@@ -31,19 +27,40 @@ class _KategoriScreenState extends State<KategoriScreen> {
     },
   ];
 
-  // --- FUNGSI TAMBAH KATEGORI BARU ---
+  late List<Map<String, String>> filteredCategories;
+
+  @override
+  void initState() {
+    super.initState();
+    filteredCategories = List.from(categories);
+  }
+
+  void _searchKategori(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        filteredCategories = List.from(categories);
+      } else {
+        filteredCategories = categories.where((item) {
+          final title = item['title']!.toLowerCase();
+          final subtitle = item['subtitle']!.toLowerCase();
+          final input = query.toLowerCase();
+          return title.contains(input) || subtitle.contains(input);
+        }).toList();
+      }
+    });
+  }
+
+  // =======================
+  // 🔥 FIX UTAMA DI SINI
+  // =======================
   void _showAddDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => TambahKategoriBaru(
-        onSave: (nama, keterangan) {
+        onSuccess: () {
           setState(() {
-            // Data dimasukkan ke list static sehingga tersimpan di memori
-            categories.insert(0, {
-              'title': nama,
-              'subtitle': keterangan,
-              'count': '0 alat tersedia',
-            });
+            // UI refresh, data disimpan di Supabase oleh dialog
+            filteredCategories = List.from(categories);
           });
         },
       ),
@@ -93,6 +110,7 @@ class _KategoriScreenState extends State<KategoriScreen> {
                         onPressed: () {
                           setState(() {
                             categories.removeAt(index);
+                            filteredCategories = List.from(categories);
                           });
                           Navigator.pop(context);
                         },
@@ -128,6 +146,7 @@ class _KategoriScreenState extends State<KategoriScreen> {
           setState(() {
             categories[index]['title'] = newNama;
             categories[index]['subtitle'] = newKeterangan;
+            filteredCategories = List.from(categories);
           });
         },
       ),
@@ -185,8 +204,10 @@ class _KategoriScreenState extends State<KategoriScreen> {
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(color: Colors.orange.shade200),
                     ),
-                    child: const TextField(
-                      decoration: InputDecoration(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _searchKategori,
+                      decoration: const InputDecoration(
                         border: InputBorder.none,
                         icon: Icon(Icons.search, color: Colors.orange),
                         hintText: 'Cari Nama kategori / nama alat',
@@ -198,34 +219,31 @@ class _KategoriScreenState extends State<KategoriScreen> {
                     ),
                   ),
                   const SizedBox(height: 15),
-
-                  // --- BUTTON TAMBAH KATEGORI ---
                   ElevatedButton.icon(
                     onPressed: () => _showAddDialog(context),
                     icon: const Icon(Icons.add_circle, color: Colors.white),
-                    label: const Text('tambah kategori baru'),
+                    label: const Text(
+                      'tambah kategori baru',
+                      style: TextStyle(color: Color(0xFFFFF1CC)),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF58220),
-                      foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 55),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 25),
-
-                  // RENDER LIST
-                  ...categories.asMap().entries.map((entry) {
-                    int index = entry.key;
-                    var item = entry.value;
+                  ...filteredCategories.asMap().entries.map((entry) {
+                    final item = entry.value;
+                    final originalIndex = categories.indexOf(item);
                     return CategoryCard(
                       title: item['title']!,
                       subtitle: item['subtitle']!,
                       count: item['count']!,
-                      onDelete: () => _showDeleteDialog(context, index),
-                      onEdit: () => _showEditDialog(context, index),
+                      onDelete: () => _showDeleteDialog(context, originalIndex),
+                      onEdit: () => _showEditDialog(context, originalIndex),
                     );
                   }).toList(),
                 ],
@@ -233,14 +251,6 @@ class _KategoriScreenState extends State<KategoriScreen> {
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: AdminBottomNavbar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
       ),
     );
   }
@@ -324,13 +334,6 @@ class CategoryCard extends StatelessWidget {
                   onPressed: onEdit,
                   icon: const Icon(Icons.edit_note, size: 18),
                   label: const Text('Edit'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFF58220),
-                    side: const BorderSide(color: Color(0xFFF58220)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -345,12 +348,6 @@ class CategoryCard extends StatelessWidget {
                   label: const Text(
                     'Hapus',
                     style: TextStyle(color: Colors.red),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
                   ),
                 ),
               ),

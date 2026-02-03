@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-// Pastikan path import ini sesuai dengan struktur folder proyek Anda
+import 'package:sipetir/peminjam/manajemen_peminjaman_page.dart';
 import 'package:sipetir/peminjam/pengembalian_page.dart';
 import 'package:sipetir/widgets/header_custom.dart';
 import 'package:sipetir/peminjam/widgets/bottom_navbar.dart';
-import 'package:sipetir/peminjam/daftar_alat_page.dart';
-import 'package:sipetir/peminjam/manajemen_peminjaman_page.dart';
 
 class DashboardPeminjamPage extends StatefulWidget {
   const DashboardPeminjamPage({super.key});
@@ -15,8 +13,47 @@ class DashboardPeminjamPage extends StatefulWidget {
 
 class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
   int _currentIndex = 0;
+  int _jumlahKeranjang = 0;
 
-  // Fungsi untuk menentukan Header secara dinamis berdasarkan index
+  final TextEditingController _searchController = TextEditingController();
+
+  final List<Map<String, String>> _alatList = [
+    {'title': 'Keselamatan Kerja (K3)', 'subtitle': '20 Alat'},
+    {'title': 'Alat Ukur Listrik', 'subtitle': '12 Alat'},
+    {'title': 'Peralatan Mekanik', 'subtitle': '8 Alat'},
+    {'title': 'Alat Analisis & Quality Check', 'subtitle': '15 Alat'},
+  ];
+
+  List<Map<String, String>> _filteredAlatList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredAlatList = List.from(_alatList);
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    String query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredAlatList = _alatList
+          .where((alat) => alat['title']!.toLowerCase().contains(query))
+          .toList();
+    });
+  }
+
+  void _tambahKeranjang() {
+    setState(() {
+      _jumlahKeranjang += 1;
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Widget _buildHeader() {
     switch (_currentIndex) {
       case 0:
@@ -37,19 +74,18 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
     }
   }
 
-  // Fungsi untuk berpindah konten body berdasarkan index navbar
   Widget _buildBodyContent() {
     switch (_currentIndex) {
       case 0:
         return _buildMainDashboard();
       case 1:
-        return const DaftarAlatPage();
+        return DaftarAlatPage(onPinjam: _tambahKeranjang);
       case 2:
         return const PeminjamanContentView();
       case 3:
-        return const PengembalianPage(); // Pastikan file ini tidak punya Scaffold/Header lagi
+        return const PengembalianPage();
       case 4:
-        return const Center(child: Text("Halaman Keranjang"));
+        return KeranjangPageWithoutAppBar(jumlah: _jumlahKeranjang);
       default:
         return _buildMainDashboard();
     }
@@ -66,12 +102,12 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
             _currentIndex = index;
           });
         },
+        jumlahKeranjang: _jumlahKeranjang, // badge di navbar
       ),
-      // Menggunakan SafeArea agar header tidak tertutup status bar (jam/baterai) HP
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(), // Header tunggal yang dikontrol oleh state
+            _buildHeader(),
             Expanded(child: _buildBodyContent()),
           ],
         ),
@@ -79,7 +115,6 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
     );
   }
 
-  // --- TAMPILAN UTAMA DASHBOARD (INDEX 0) ---
   Widget _buildMainDashboard() {
     return SingleChildScrollView(
       child: Padding(
@@ -107,14 +142,7 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
               ),
             ),
             const SizedBox(height: 15),
-            _buildCategoryCard('40', 'Keselamatan Kerja (K3)', '20 Alat'),
-            _buildCategoryCard('12', 'Alat Ukur Listrik', '12 Alat'),
-            _buildCategoryCard('08', 'Peralatan Mekanik', '8 Alat'),
-            _buildCategoryCard(
-              '15',
-              'Alat Analisis & Quality Check',
-              '15 Alat',
-            ),
+            _buildCategoryCards(),
             const SizedBox(height: 30),
           ],
         ),
@@ -122,9 +150,9 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
     );
   }
 
-  // --- WIDGET HELPERS ---
   Widget _buildSearchBar() {
     return TextField(
+      controller: _searchController,
       decoration: InputDecoration(
         hintText: 'Cari Alat...',
         hintStyle: const TextStyle(color: Color(0xFFFFB385)),
@@ -137,6 +165,18 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
         ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
       ),
+    );
+  }
+
+  Widget _buildCategoryCards() {
+    return Column(
+      children: _filteredAlatList.map((alat) {
+        return _buildCategoryCard(
+          alat['subtitle']!.split(' ')[0],
+          alat['title']!,
+          alat['subtitle']!,
+        );
+      }).toList(),
     );
   }
 
@@ -242,6 +282,241 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ------------------ DAFTAR ALAT PAGE ------------------
+class DaftarAlatPage extends StatefulWidget {
+  final VoidCallback onPinjam;
+  const DaftarAlatPage({super.key, required this.onPinjam});
+
+  @override
+  State<DaftarAlatPage> createState() => _DaftarAlatPageState();
+}
+
+class _DaftarAlatPageState extends State<DaftarAlatPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Daftar Alat',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFF7A21),
+                ),
+              ),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Cari Nama Alat / kode alat',
+                        hintStyle: const TextStyle(
+                          color: Color(0xFFFFB385),
+                          fontSize: 13,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Color(0xFFFFB385),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFFFB385),
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFE5D1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFFB385)),
+                    ),
+                    child: const Icon(
+                      Icons.tune,
+                      color: Color(0xFFFF7A21),
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            children: [
+              _buildAlatCard('Sarung Tangan Listrik', 'Keselamatan Kerja (K3)'),
+              _buildAlatCard('Megger (Insulation Tester)', 'Alat Ukur Listrik'),
+              _buildAlatCard('Dial Indicator', 'Peralatan Mekanik'),
+              _buildAlatCard('Kunci Torsi', 'Peralatan Mekanik'),
+              _buildAlatCard('Watt Meter', 'Alat Ukur Listrik'),
+              _buildAlatCard('pH Meter', 'Alat Analisis & Quality Check'),
+              const SizedBox(height: 100),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAlatCard(String nama, String kategori) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFB385)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            nama,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: Color(0xFF4A4A4A),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE5D1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  kategori,
+                  style: const TextStyle(
+                    color: Color(0xFFFF7A21),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: widget.onPinjam,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 25,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE5D1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFFB385)),
+                  ),
+                  child: const Text(
+                    'Pinjam',
+                    style: TextStyle(
+                      color: Color(0xFFFF7A21),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------ KERANJANG PAGE ------------------
+class KeranjangPageWithoutAppBar extends StatelessWidget {
+  final int jumlah;
+  const KeranjangPageWithoutAppBar({super.key, this.jumlah = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFE5D1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.shopping_basket_rounded,
+                size: 100,
+                color: Color(0xFFFF7A21),
+              ),
+            ),
+            const SizedBox(height: 25),
+            const Text(
+              'Keranjang kosong,',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF4A4A4A),
+              ),
+            ),
+            const Text(
+              'belum ada alat yang dipilih',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF4A4A4A),
+              ),
+            ),
+          ],
+        ),
+        if (jumlah > 0)
+          Positioned(
+            top: 0,
+            right: 120,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '$jumlah',
+                style: const TextStyle(
+                  color: Color(0xFFFFF1E6),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -1,156 +1,225 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class EditAlatPage extends StatelessWidget {
+class EditAlatPage extends StatefulWidget {
   final Map<String, dynamic> data;
 
   const EditAlatPage({super.key, required this.data});
 
   @override
+  State<EditAlatPage> createState() => _EditAlatPageState();
+}
+
+class _EditAlatPageState extends State<EditAlatPage> {
+  late TextEditingController namaController;
+  late TextEditingController kodeController;
+
+  final List<String> daftarKategori = [
+    'Alat Ukur Listrik',
+    'Peralatan Mekanik',
+    'Alat Analisis & Quality Check',
+    'Keselamatan Kerja (K3)',
+  ];
+
+  String? selectedKategori;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inisialisasi controller
+    namaController = TextEditingController(
+      text: widget.data['nama_barang'] ?? widget.data['title'] ?? "",
+    );
+    kodeController = TextEditingController(
+      text: widget.data['kode_alat'] ?? widget.data['itemCode'] ?? "",
+    );
+
+    // Ambil kategori awal secara aman
+    String kategoriAwal = 'Alat Ukur Listrik';
+    if (widget.data['kategori'] is Map) {
+      kategoriAwal = widget.data['kategori']['nama_kategori'].toString();
+    } else if (widget.data['category'] != null) {
+      kategoriAwal = widget.data['category'].toString();
+    } else if (widget.data['kategori'] != null) {
+      kategoriAwal = widget.data['kategori'].toString();
+    }
+
+    selectedKategori = daftarKategori.contains(kategoriAwal)
+        ? kategoriAwal
+        : daftarKategori[0];
+  }
+
+  @override
+  void dispose() {
+    namaController.dispose();
+    kodeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateData() async {
+    // Mencoba mengambil ID dari berbagai kemungkinan nama kunci
+    final dynamic idAlat = widget.data['id'] ?? widget.data['id_alat'];
+
+    if (idAlat == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error: ID Alat tidak ditemukan di data awal!"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      await supabase
+          .from('alat') // Pastikan nama tabel ini sesuai di Supabase
+          .update({
+            'nama_barang': namaController.text,
+            'kode_alat': kodeController.text,
+            'kategori': selectedKategori,
+          })
+          .eq('id', idAlat);
+
+      if (mounted) {
+        Navigator.pop(context, true); // Kirim true agar halaman daftar refresh
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Berhasil memperbarui data")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal menyimpan: $e")));
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Scaffold adalah kunci untuk menghilangkan error "No Material widget found"
-    return Scaffold(
-      backgroundColor: Colors.black.withOpacity(
-        0.5,
-      ), // Efek transparan belakang
-      body: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF1E6), // Warna cream sesuai gambar
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Edit Alat",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFF58220),
+    return Dialog(
+      backgroundColor: const Color(0xFFFEE7D6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(35)),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Edit Alat",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFF58220),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildLabel("Nama Alat"),
+              _buildTextField(controller: namaController),
+              const SizedBox(height: 16),
+              _buildLabel("Kode Alat"),
+              _buildTextField(controller: kodeController),
+              const SizedBox(height: 16),
+              _buildLabel("Kategori"),
+              _buildDropdown(),
+              const SizedBox(height: 30),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFFBB074)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: const Text(
+                        "Batal",
+                        style: TextStyle(color: Color(0xFFF58220)),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-
-                // Form Field Nama Alat
-                _buildLabel("Nama Alat"),
-                _buildTextField(initialValue: data['title']),
-
-                const SizedBox(height: 15),
-
-                // Form Field Kode Alat
-                _buildLabel("Kode Alat"),
-                _buildTextField(initialValue: data['itemCode']),
-
-                const SizedBox(height: 15),
-
-                // Form Field Kategori
-                _buildLabel("Kategori"),
-                _buildDropdown(initialValue: data['category']),
-
-                const SizedBox(height: 30),
-
-                // Tombol Aksi
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFF58220),
-                          side: const BorderSide(color: Color(0xFFFBB074)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text("Batal"),
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Logika simpan di sini
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF58220),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          "Simpan",
-                          style: TextStyle(color: Colors.white),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _updateData,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF58220),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
                         ),
                       ),
+                      child: const Text(
+                        "Simpan",
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          color: Colors.black87,
-        ),
+  Widget _buildLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 8.0),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.w600,
+        color: Colors.black54,
       ),
-    );
-  }
+    ),
+  );
 
-  Widget _buildTextField({String? initialValue}) {
+  Widget _buildTextField({required TextEditingController controller}) {
     return TextFormField(
-      initialValue: initialValue,
+      controller: controller,
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 15,
-          vertical: 10,
+          horizontal: 16,
+          vertical: 12,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(15),
           borderSide: const BorderSide(color: Color(0xFFFBB074)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFF58220), width: 2),
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Color(0xFFF58220)),
         ),
       ),
     );
   }
 
-  Widget _buildDropdown({String? initialValue}) {
+  Widget _buildDropdown() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFFBB074)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: initialValue,
+          value: selectedKategori,
           isExpanded: true,
-          items: [
-            initialValue ?? 'Umum',
-          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (val) {},
+          items: daftarKategori.map((String value) {
+            return DropdownMenuItem<String>(value: value, child: Text(value));
+          }).toList(),
+          onChanged: (val) {
+            setState(() => selectedKategori = val);
+          },
         ),
       ),
     );

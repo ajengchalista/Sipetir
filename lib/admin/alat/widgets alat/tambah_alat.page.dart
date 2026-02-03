@@ -142,9 +142,15 @@ class _TambahAlatPageState extends State<TambahAlatPage> {
               : _selectedKategori,
           hint: const Text('Pilih Kategori'),
           isExpanded: true,
-          items: ['Alat Listrik', 'Alat Ukur', 'K3']
-              .map((val) => DropdownMenuItem(value: val, child: Text(val)))
-              .toList(),
+          items:
+              [
+                    'Alat Ukur Listrik',
+                    'Peralatan Mekanik',
+                    'Alat Analisis & Quality Check',
+                    'Keselamatan Kerja (K3)',
+                  ]
+                  .map((val) => DropdownMenuItem(value: val, child: Text(val)))
+                  .toList(),
           onChanged: (val) => setState(() => _selectedKategori = val!),
         ),
       ),

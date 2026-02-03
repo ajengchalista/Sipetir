@@ -27,7 +27,7 @@ class _ProfilPageState extends State<ProfilPage> {
       backgroundColor: const Color(0xFFFFF1E6),
       body: Column(
         children: [
-          // HEADER
+          // ================= HEADER =================
           Stack(
             children: [
               const HeaderCustom(title: 'Profil Pengguna'),
@@ -55,7 +55,7 @@ class _ProfilPageState extends State<ProfilPage> {
                 children: [
                   const SizedBox(height: 40),
 
-                  // AVATAR
+                  // ================= AVATAR =================
                   Center(
                     child: Container(
                       width: 150,
@@ -66,7 +66,7 @@ class _ProfilPageState extends State<ProfilPage> {
                       ),
                       child: const Center(
                         child: Text(
-                          'S',
+                          'C', // ✅ INISIAL DIGANTI JADI C
                           style: TextStyle(
                             fontSize: 80,
                             color: Colors.white,
@@ -79,7 +79,8 @@ class _ProfilPageState extends State<ProfilPage> {
 
                   const SizedBox(height: 40),
 
-                  _buildProfileField('Username', 'Selly@gmail.com'),
+                  // ================= DATA PROFIL =================
+                  _buildProfileField('Username', 'Chalista@gmail.com'),
                   const SizedBox(height: 20),
                   _buildProfileField(
                     'Password',
@@ -87,11 +88,11 @@ class _ProfilPageState extends State<ProfilPage> {
                     isPassword: true,
                   ),
                   const SizedBox(height: 20),
-                  _buildProfileField('Status', 'Admin'),
+                  _buildProfileField('Status', 'Petugas'),
 
                   const SizedBox(height: 50),
 
-                  // ✅ TOMBOL LOGOUT + DIALOG
+                  // ================= LOGOUT =================
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -128,6 +129,7 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
+  // ================= FIELD =================
   Widget _buildProfileField(
     String label,
     String value, {

@@ -30,7 +30,7 @@ class _TambahAlatPageState extends State<TambahAlatPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "Tambah Alat Baru",
+                  "Tambah User Baru",
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -38,11 +38,11 @@ class _TambahAlatPageState extends State<TambahAlatPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                _buildLabel("Nama Alat"),
-                _buildTextField("Masukkan nama alat"),
+                _buildLabel("Nama User"),
+                _buildTextField("Masukkan nama user"),
                 const SizedBox(height: 15),
-                _buildLabel("Kode Alat"),
-                _buildTextField("Masukkan kode alat"),
+                _buildLabel("Password"),
+                _buildTextField("Masukkan Password"),
                 const SizedBox(height: 15),
                 _buildLabel("Kategori"),
                 _buildDropdown(),

@@ -8,6 +8,7 @@ class PeminjamNavbar extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onTap,
+    required int jumlahKeranjang,
   });
 
   @override
@@ -24,10 +25,22 @@ class PeminjamNavbar extends StatelessWidget {
           unselectedItemColor: Colors.grey,
           showUnselectedLabels: true,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Dashboard'),
-            BottomNavigationBarItem(icon: Icon(Icons.work_outline), label: 'Daftar Alat'),
-            BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'Peminjaman'),
-            BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Pengembalian'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.grid_view_rounded),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.work_outline),
+              label: 'Daftar Alat',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.list_alt_rounded),
+              label: 'Peminjaman',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.inventory_2_outlined),
+              label: 'Pengembalian',
+            ),
           ],
         ),
         // Tombol Keranjang Orange di Tengah
@@ -43,8 +56,11 @@ class PeminjamNavbar extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFFF7A21), width: 2),
               ),
-              child: const Icon(Icons.shopping_basket_outlined, 
-                  size: 35, color: Color(0xFFFF7A21)),
+              child: const Icon(
+                Icons.shopping_basket_outlined,
+                size: 35,
+                color: Color(0xFFFF7A21),
+              ),
             ),
           ),
         ),

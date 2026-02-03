@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 
-class DaftarAlatPage extends StatelessWidget {
-  const DaftarAlatPage({super.key});
+class DaftarAlatPage extends StatefulWidget {
+  final VoidCallback onPinjam; // callback ke dashboard
+  const DaftarAlatPage({super.key, required this.onPinjam});
 
+  @override
+  State<DaftarAlatPage> createState() => _DaftarAlatPageState();
+}
+
+class _DaftarAlatPageState extends State<DaftarAlatPage> {
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -22,23 +28,32 @@ class DaftarAlatPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 15),
-              // Search Bar & Filter Button
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       decoration: InputDecoration(
                         hintText: 'Cari Nama Alat / kode alat',
-                        hintStyle: const TextStyle(color: Color(0xFFFFB385), fontSize: 13),
-                        prefixIcon: const Icon(Icons.search, color: Color(0xFFFFB385)),
+                        hintStyle: const TextStyle(
+                          color: Color(0xFFFFB385),
+                          fontSize: 13,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Color(0xFFFFB385),
+                        ),
                         filled: true,
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(vertical: 0),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Color(0xFFFFB385)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFFFB385),
+                          ),
                         ),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
                       ),
                     ),
                   ),
@@ -50,15 +65,17 @@ class DaftarAlatPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFFFB385)),
                     ),
-                    child: const Icon(Icons.tune, color: Color(0xFFFF7A21), size: 20),
+                    child: const Icon(
+                      Icons.tune,
+                      color: Color(0xFFFF7A21),
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        
-        // List Alat
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -95,7 +112,6 @@ class DaftarAlatPage extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Label Tersedia
           Positioned(
             top: 0,
             right: 0,
@@ -107,7 +123,11 @@ class DaftarAlatPage extends StatelessWidget {
               ),
               child: const Text(
                 'Tersedia',
-                style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Color(0xFF10B981),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -116,35 +136,54 @@ class DaftarAlatPage extends StatelessWidget {
             children: [
               Text(
                 nama,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF4A4A4A)),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Color(0xFF4A4A4A),
+                ),
               ),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Label Kategori
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFE5D1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       kategori,
-                      style: const TextStyle(color: Color(0xFFFF7A21), fontSize: 10, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        color: Color(0xFFFF7A21),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  // Tombol Pinjam
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFE5D1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFB385)),
-                    ),
-                    child: const Text(
-                      'Pinjam',
-                      style: TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold, fontSize: 13),
+                  GestureDetector(
+                    onTap: widget.onPinjam,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFE5D1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFB385)),
+                      ),
+                      child: const Text(
+                        'Pinjam',
+                        style: TextStyle(
+                          color: Color(0xFFFF7A21),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   ),
                 ],

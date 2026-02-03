@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sipetir/admin/alat/widgets%20alat/tambah_alat.page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sipetir/admin/alat/widgets%20alat/edit_alat_page.dart';
 import 'package:sipetir/admin/dashboard/dashboard_admin_page.dart';
 import 'package:sipetir/admin/peminjaman/peminjaman_page.dart';
-import 'package:sipetir/admin/alat/tambah_alat.page.dart';
 import 'package:sipetir/admin/pengembalian/pengembalian_page.dart';
 import 'package:sipetir/admin/widgets/bottom_navbar.dart';
 import 'package:sipetir/admin/halaman%20profil/profil_page.dart';
@@ -34,6 +34,7 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
+      // Mengambil data alat beserta nama_kategori dari tabel kategori
       final data = await supabase
           .from('Alat')
           .select('*, kategori(nama_kategori)');
@@ -120,22 +121,15 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
                           const SizedBox(height: 20),
                           _buildSearchBox(),
                           const SizedBox(height: 20),
-
-                          // TOMBOL TAMBAH ALAT (LOGIKA POP-UP DI SINI)
                           ElevatedButton.icon(
                             onPressed: () {
                               showDialog(
                                 context: context,
                                 barrierDismissible: true,
-                                builder: (BuildContext context) {
-                                  // Memanggil halaman tambah alat sebagai Dialog
-                                  return const TambahAlatPage();
-                                },
+                                builder: (BuildContext context) =>
+                                    const TambahAlatPage(),
                               ).then((value) {
-                                // Jika data berhasil disimpan, refresh list
-                                if (value == true) {
-                                  _fetchAlat();
-                                }
+                                if (value == true) _fetchAlat();
                               });
                             },
                             icon: const Icon(
@@ -152,9 +146,7 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 25),
-
                           _foundAlat.isEmpty
                               ? const Center(child: Text("Tidak ada data alat"))
                               : ListView.builder(
@@ -163,20 +155,29 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
                                   itemCount: _foundAlat.length,
                                   itemBuilder: (_, i) {
                                     final item = _foundAlat[i];
+
+                                    // PERBAIKAN: Ekstrak String kategori dari Map agar tidak TypeError
+                                    String categoryName = 'Tanpa Kategori';
+                                    if (item['kategori'] != null &&
+                                        item['kategori'] is Map) {
+                                      categoryName =
+                                          item['kategori']['nama_kategori'] ??
+                                          'Tanpa Kategori';
+                                    }
+
                                     return ItemCard(
                                       title: item['nama_barang'] ?? '',
                                       itemCode: item['kode_alat'] ?? '',
-                                      category:
-                                          item['kategori']?['nama_kategori'] ??
-                                          'Tanpa Kategori',
+                                      category: categoryName,
                                       onEdit: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                EditAlatPage(data: item),
-                                          ),
-                                        ).then((_) => _fetchAlat());
+                                        showDialog(
+                                          context: context,
+                                          barrierColor: Colors.black54,
+                                          builder: (context) =>
+                                              EditAlatPage(data: item),
+                                        ).then((value) {
+                                          if (value == true) _fetchAlat();
+                                        });
                                       },
                                       onDelete: () async {
                                         await supabase
@@ -285,6 +286,7 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
     );
   }
 
+  // PERBAIKAN SINTAKSIS PENUTUP (Bracket & Parenthesis)
   Widget _buildStatCard(
     String value,
     String label,

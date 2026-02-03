@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/kategori_service.dart';
 
-// Nama class disamakan dengan yang di-import di halaman utama
 class TambahKategoriBaru extends StatefulWidget {
-  final Function(String nama, String keterangan) onSave;
+  final VoidCallback onSuccess;
 
-  const TambahKategoriBaru({super.key, required this.onSave});
+  const TambahKategoriBaru({super.key, required this.onSuccess});
 
   @override
   State<TambahKategoriBaru> createState() => _TambahKategoriBaruState();
@@ -14,158 +14,108 @@ class _TambahKategoriBaruState extends State<TambahKategoriBaru> {
   final TextEditingController namaController = TextEditingController();
   final TextEditingController keteranganController = TextEditingController();
 
+  final KategoriService _kategoriService = KategoriService();
+  bool isLoading = false;
+
   @override
   void dispose() {
-    // Membuang controller saat widget dihapus dari memori
     namaController.dispose();
     keteranganController.dispose();
     super.dispose();
   }
 
+  Future<void> simpanKategori() async {
+    if (namaController.text.isEmpty || keteranganController.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Semua field wajib diisi')));
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      await _kategoriService.tambahKategori(
+        nama: namaController.text,
+        keterangan: keteranganController.text,
+      );
+
+      widget.onSuccess();
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan kategori: $e')));
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-      backgroundColor: const Color(0xFFFEF2E8),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(25.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Tambah Kategori Baru",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFF58220),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tambah Kategori Baru',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            const Text('Nama Kategori'),
+            const SizedBox(height: 6),
+            TextField(
+              controller: namaController,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              const SizedBox(height: 20),
+            ),
 
-              const Text(
-                "Nama Kategori",
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: namaController,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 15,
-                    vertical: 10,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFF58220)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFF58220),
-                      width: 2,
-                    ),
-                  ),
+            const SizedBox(height: 14),
+            const Text('Keterangan'),
+            const SizedBox(height: 6),
+            TextField(
+              controller: keteranganController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
+            ),
 
-              const SizedBox(height: 20),
-
-              const Text(
-                "Keterangan",
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: keteranganController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFF58220)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFF58220),
-                      width: 2,
-                    ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Batal'),
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 30),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: const BorderSide(color: Color(0xFFF58220)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "Batal",
-                        style: TextStyle(
-                          color: Color(0xFFF58220),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : simpanKategori,
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Simpan'),
                   ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (namaController.text.isNotEmpty) {
-                          // Mengirim data balik ke KategoriScreen
-                          widget.onSave(
-                            namaController.text,
-                            keteranganController.text,
-                          );
-                          Navigator.pop(context);
-                        } else {
-                          // Opsional: Beri peringatan jika nama kosong
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Nama kategori tidak boleh kosong!',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: const Color(0xFFF58220),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        "Simpan",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

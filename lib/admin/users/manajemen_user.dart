@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:sipetir/admin/users/tambah_user.dart';
-import 'package:sipetir/admin/halaman%20profil/profil_page.dart';
+import 'package:sipetir/admin/users/widgets%20user/tambah_user.dart';
+import 'package:sipetir/admin/halaman profil/profil_page.dart';
+import 'package:sipetir/admin/users/widgets user/edit_user.dart';
 
 class ManajemenUserPage extends StatefulWidget {
   const ManajemenUserPage({super.key});
@@ -24,7 +25,6 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
     _fetchUsers();
   }
 
-  // Fungsi untuk mengambil data dari Supabase
   Future<void> _fetchUsers() async {
     setState(() => _isLoading = true);
     try {
@@ -51,7 +51,7 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
       backgroundColor: bgKrem,
       body: Column(
         children: [
-          // Header Oranye Melengkung
+          // HEADER
           Container(
             height: 140,
             padding: const EdgeInsets.only(top: 50, left: 10, right: 20),
@@ -98,7 +98,7 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
             ),
           ),
 
-          // Konten Body
+          // BODY
           Expanded(
             child: RefreshIndicator(
               onRefresh: _fetchUsers,
@@ -108,7 +108,6 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    // Search & Filter
                     Row(
                       children: [
                         Expanded(child: _buildSearchField()),
@@ -118,12 +117,9 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Tombol Tambah User Baru
                     _buildAddButton(),
-
                     const SizedBox(height: 25),
 
-                    // List User
                     _isLoading
                         ? Center(
                             child: CircularProgressIndicator(color: orange),
@@ -136,11 +132,14 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                             itemCount: _users.length,
                             itemBuilder: (context, index) {
                               final user = _users[index];
+                              final username = user['username'] ?? "user";
+
                               return _buildUserCard(
-                                (user['username'] ?? "U")[0].toUpperCase(),
-                                user['username'] ?? "User",
+                                username[0].toUpperCase(),
+                                username,
                                 user['role'] ?? "Peminjam",
-                                "user@brantas.com",
+                                "${username.toLowerCase()}@gmail.com",
+                                user, // Mengirim data user ke fungsi card
                               );
                             },
                           ),
@@ -191,13 +190,11 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
       height: 55,
       child: ElevatedButton.icon(
         onPressed: () async {
-          // PERBAIKAN: Memanggil TambahUserDialog, bukan TambahAlatPage
           final result = await showDialog(
             context: context,
             builder: (_) => TambahAlatPage(orange: orange, bg: bgKrem),
           );
 
-          // Jika simpan berhasil (Navigator.pop mengirim true), refresh data
           if (result == true) {
             _fetchUsers();
           }
@@ -227,6 +224,7 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
     String nama,
     String role,
     String email,
+    Map<String, dynamic> userData,
   ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -240,7 +238,6 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
         children: [
           Row(
             children: [
-              // Avatar Kotak
               Container(
                 width: 50,
                 height: 50,
@@ -259,7 +256,6 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                 ),
               ),
               const SizedBox(width: 15),
-              // Nama & Email
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +271,6 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                   ],
                 ),
               ),
-              // Badge Role
               Text(
                 role,
                 style: TextStyle(
@@ -287,12 +282,24 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
             ],
           ),
           const SizedBox(height: 15),
-          // Tombol Aksi Edit & Hapus
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () async {
+                    // --- MENGIRIM DATA USER YANG DIKLIK KE DIALOG EDIT ---
+                    final result = await showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      builder: (BuildContext context) {
+                        return EditUserPage(userData: userData);
+                      },
+                    );
+
+                    if (result == true) {
+                      _fetchUsers();
+                    }
+                  },
                   icon: Icon(Icons.edit_note, color: orange),
                   label: Text("Edit", style: TextStyle(color: orange)),
                   style: OutlinedButton.styleFrom(
@@ -306,7 +313,9 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    // Logika hapus bisa ditambahkan di sini
+                  },
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   label: const Text(
                     "Hapus",
