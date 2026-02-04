@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sipetir/admin/users/widgets%20user/tambah_user.dart';
 import 'package:sipetir/admin/halaman profil/profil_page.dart';
 import 'package:sipetir/admin/users/widgets user/edit_user.dart';
+import 'package:sipetir/admin/users/dialog/delete_dialog.dart';
 
 class ManajemenUserPage extends StatefulWidget {
   const ManajemenUserPage({super.key});
@@ -38,10 +39,7 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error Fetch: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -51,7 +49,6 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
       backgroundColor: bgKrem,
       body: Column(
         children: [
-          // HEADER
           Container(
             height: 140,
             padding: const EdgeInsets.only(top: 50, left: 10, right: 20),
@@ -87,18 +84,14 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                     color: Colors.white,
                     size: 35,
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ProfilPage()),
-                    );
-                  },
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfilPage()),
+                  ),
                 ),
               ],
             ),
           ),
-
-          // BODY
           Expanded(
             child: RefreshIndicator(
               onRefresh: _fetchUsers,
@@ -108,18 +101,8 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(child: _buildSearchField()),
-                        const SizedBox(width: 10),
-                        _buildFilterButton(),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    _buildAddButton(),
+                    _buildTopActions(),
                     const SizedBox(height: 25),
-
                     _isLoading
                         ? Center(
                             child: CircularProgressIndicator(color: orange),
@@ -132,15 +115,7 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                             itemCount: _users.length,
                             itemBuilder: (context, index) {
                               final user = _users[index];
-                              final username = user['username'] ?? "user";
-
-                              return _buildUserCard(
-                                username[0].toUpperCase(),
-                                username,
-                                user['role'] ?? "Peminjam",
-                                "${username.toLowerCase()}@gmail.com",
-                                user, // Mengirim data user ke fungsi card
-                              );
+                              return _buildUserCard(user);
                             },
                           ),
                   ],
@@ -153,84 +128,90 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
     );
   }
 
-  Widget _buildSearchField() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: orange.withOpacity(0.5)),
-      ),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Cari Username',
-          hintStyle: TextStyle(color: orange.withOpacity(0.5)),
-          prefixIcon: Icon(Icons.search, color: orange.withOpacity(0.5)),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+  Widget _buildTopActions() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: orange.withOpacity(0.5)),
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Cari Username',
+                    hintStyle: TextStyle(color: orange.withOpacity(0.5)),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: orange.withOpacity(0.5),
+                    ),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: orange.withOpacity(0.5)),
+              ),
+              child: Icon(Icons.tune, color: orange),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFilterButton() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: orange.withOpacity(0.5)),
-      ),
-      child: Icon(Icons.tune, color: orange, size: 25),
-    );
-  }
-
-  Widget _buildAddButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          final result = await showDialog(
-            context: context,
-            builder: (_) => TambahAlatPage(orange: orange, bg: bgKrem),
-          );
-
-          if (result == true) {
-            _fetchUsers();
-          }
-        },
-        icon: const Icon(Icons.person_add_alt_1_outlined, color: Colors.white),
-        label: const Text(
-          'Tambah User Baru',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          height: 55,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              // Menunggu hasil dari halaman tambah user
+              final res = await showDialog(
+                context: context,
+                builder: (_) => AddUserPage(orange: orange, bg: bgKrem),
+              );
+              // Jika berhasil tambah (res == true), refresh list
+              if (res == true) _fetchUsers();
+            },
+            icon: const Icon(
+              Icons.person_add_alt_1_outlined,
+              color: Colors.white,
+            ),
+            label: const Text(
+              'Tambah User Baru',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: orange,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+            ),
           ),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: orange,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-      ),
+      ],
     );
   }
 
-  Widget _buildUserCard(
-    String initial,
-    String nama,
-    String role,
-    String email,
-    Map<String, dynamic> userData,
-  ) {
+  Widget _buildUserCard(Map<String, dynamic> userData) {
+    final String username = userData['username'] ?? "user";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: bgKrem,
+        color: Colors
+            .white, // Sedikit diubah agar card terlihat jelas di atas bgKrem
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: orange.withOpacity(0.3)),
       ),
@@ -247,7 +228,7 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  initial,
+                  username.isNotEmpty ? username[0].toUpperCase() : "?",
                   style: TextStyle(
                     color: orange,
                     fontWeight: FontWeight.bold,
@@ -261,22 +242,33 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      nama,
+                      username,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
-                    Text(email, style: TextStyle(color: orange, fontSize: 13)),
+                    Text(
+                      userData['email'] ??
+                          "${username.toLowerCase()}@gmail.com",
+                      style: TextStyle(color: orange, fontSize: 13),
+                    ),
                   ],
                 ),
               ),
-              Text(
-                role,
-                style: TextStyle(
-                  color: orange.withOpacity(0.7),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  userData['role'] ?? "User",
+                  style: TextStyle(
+                    color: orange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
@@ -287,16 +279,18 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    // --- MENGIRIM DATA USER YANG DIKLIK KE DIALOG EDIT ---
-                    final result = await showDialog(
-                      context: context,
-                      barrierDismissible: true,
-                      builder: (BuildContext context) {
-                        return EditUserPage(userData: userData);
-                      },
+                    // KUNCI PERBAIKAN: Gunakan Navigator.push (jika EditUserPage adalah Page)
+                    // atau showDialog (jika EditUserPage adalah Dialog)
+                    // Disini saya asumsikan Page karena sebelumnya Anda mengirim parameter userData
+                    final res = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditUserPage(userData: userData),
+                      ),
                     );
 
-                    if (result == true) {
+                    // Jika hasil dari halaman edit adalah true, panggil ulang data
+                    if (res == true) {
                       _fetchUsers();
                     }
                   },
@@ -313,8 +307,29 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    // Logika hapus bisa ditambahkan di sini
+                  onPressed: () async {
+                    if (userData['id'] == null) return;
+
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => const CustomDeleteDialog(),
+                    );
+
+                    if (confirm == true) {
+                      try {
+                        await supabase
+                            .from('users')
+                            .delete()
+                            .eq('id', userData['id']);
+                        _fetchUsers(); // Refresh setelah hapus
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Gagal hapus: $e")),
+                          );
+                        }
+                      }
+                    }
                   },
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   label: const Text(

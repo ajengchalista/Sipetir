@@ -26,15 +26,27 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
+    debugPrint("LOGIN: tombol login ditekan");
+    debugPrint("LOGIN: email = ${_emailController.text}");
+
     setState(() => _isLoading = true);
+
     try {
+      debugPrint("LOGIN: mencoba login ke Supabase");
+
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
       final user = response.user;
-      if (user == null) throw Exception();
+
+      if (user == null) {
+        debugPrint("LOGIN ERROR: user null");
+        throw Exception();
+      }
+
+      debugPrint("LOGIN SUCCESS: user id = ${user.id}");
 
       final userData = await Supabase.instance.client
           .from('users')
@@ -42,30 +54,42 @@ class _LoginPageState extends State<LoginPage> {
           .eq('user_id', user.id)
           .maybeSingle();
 
-      if (userData == null) throw Exception();
+      if (userData == null) {
+        debugPrint("LOGIN ERROR: data user tidak ditemukan");
+        throw Exception();
+      }
+
       final role = userData['role'];
+      debugPrint("LOGIN: role user = $role");
 
       if (!mounted) return;
 
       if (role == 'admin') {
+        debugPrint("NAVIGASI: ke Dashboard Admin");
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
         );
       } else if (role == 'petugas') {
+        debugPrint("NAVIGASI: ke Dashboard Petugas");
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DashboardPetugasPage()),
         );
       } else if (role == 'penyewa') {
+        debugPrint("NAVIGASI: ke Dashboard Peminjam");
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DashboardPeminjamPage()),
         );
+      } else {
+        debugPrint("LOGIN ERROR: role tidak dikenali");
       }
     } catch (e) {
+      debugPrint("LOGIN FAILED: $e");
       _showErrorBanner();
     } finally {
+      debugPrint("LOGIN: proses selesai");
       if (mounted) setState(() => _isLoading = false);
     }
   }

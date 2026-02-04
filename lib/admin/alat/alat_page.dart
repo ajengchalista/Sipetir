@@ -1,8 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:sipetir/admin/alat/widgets%20alat/tambah_alat.page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sipetir/admin/alat/widgets%20alat/edit_alat_page.dart';
-import 'package:sipetir/admin/dashboard/dashboard_admin_page.dart';
 import 'package:sipetir/admin/peminjaman/peminjaman_page.dart';
 import 'package:sipetir/admin/pengembalian/pengembalian_page.dart';
 import 'package:sipetir/admin/widgets/bottom_navbar.dart';
@@ -36,7 +36,8 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
     try {
       final data = await supabase
           .from('Alat')
-          .select('*, kategori(nama_kategori)');
+          .select('*, kategori(nama_kategori)')
+          .order('updated_at', ascending: false);
 
       if (mounted) {
         setState(() {
@@ -56,36 +57,62 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
       _foundAlat = keyword.isEmpty
           ? List.from(_allAlat)
           : _allAlat.where((alat) {
-              final nama = alat['nama_barang'].toString().toLowerCase();
-              final kode = alat['kode_alat'].toString().toLowerCase();
+              final nama = (alat['nama_barang'] ?? '').toString().toLowerCase();
+              final kode = (alat['kode_alat'] ?? '').toString().toLowerCase();
               return nama.contains(keyword.toLowerCase()) ||
                   kode.contains(keyword.toLowerCase());
             }).toList();
     });
   }
 
-  void _onNavTapped(int index) {
-    if (_currentIndex == index) return;
-    setState(() => _currentIndex = index);
-    switch (index) {
-      case 0:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
+  Future<void> _handleTambahAlat(Map dataDariDialog) async {
+    setState(() => _isLoading = true);
+    try {
+      String? imageUrl;
+
+      if (dataDariDialog['file_gambar'] != null) {
+        final String fileName =
+            'alat_${DateTime.now().millisecondsSinceEpoch}.png';
+
+        await supabase.storage
+            .from('GAMBAR_ALAT.')
+            .uploadBinary(
+              fileName,
+              dataDariDialog['file_gambar'] as Uint8List,
+              fileOptions: const FileOptions(contentType: 'image/png'),
+            );
+
+        imageUrl = supabase.storage.from('GAMBAR_ALAT.').getPublicUrl(fileName);
+      }
+
+      await supabase.from('Alat').insert({
+        'nama_barang': dataDariDialog['nama'],
+        'kode_alat': dataDariDialog['kode'],
+        'kategori_id': dataDariDialog['kategori_id'],
+        'gambar_url': imageUrl,
+      });
+
+      await _fetchAlat();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Alat Berhasil Ditambahkan!"),
+            backgroundColor: Colors.green,
+          ),
         );
-        break;
-      case 2:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const PeminjamanPage()),
+      }
+    } catch (e) {
+      debugPrint("Gagal Simpan: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal Simpan: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
-        break;
-      case 3:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const PengembalianPage()),
-        );
-        break;
+      }
     }
   }
 
@@ -104,6 +131,7 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
                 : RefreshIndicator(
                     onRefresh: _fetchAlat,
                     child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,12 +160,76 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
       ),
       bottomNavigationBar: AdminBottomNavbar(
         currentIndex: _currentIndex,
-        onTap: _onNavTapped,
+        onTap: (i) {
+          setState(() => _currentIndex = i);
+
+          if (i == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const PeminjamanPage()),
+            );
+          } else if (i == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const PengembalianPage()),
+            );
+          }
+        },
       ),
     );
   }
 
-  // --- WIDGET HELPER ---
+  Widget _buildAddButton() {
+    return ElevatedButton.icon(
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (context) => const TambahAlatPage(),
+        ).then((value) {
+          if (value != null && value is Map) _handleTambahAlat(value);
+        });
+      },
+      icon: const Icon(Icons.add_circle, color: Colors.white),
+      label: const Text("Tambah Alat Baru"),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFF58220),
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      ),
+    );
+  }
+
+  Widget _buildListAlat() {
+    if (_foundAlat.isEmpty)
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 20),
+          child: Text("Data tidak ditemukan"),
+        ),
+      );
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _foundAlat.length,
+      itemBuilder: (_, i) {
+        final item = _foundAlat[i];
+        return ItemCard(
+          item: item,
+          supabase: supabase,
+          fetchAlat: _fetchAlat,
+          onEdit: () {
+            showDialog(
+              context: context,
+              builder: (context) => EditAlatPage(data: item),
+            ).then((v) {
+              if (v == true) _fetchAlat();
+            });
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildHeader() {
     return Stack(
@@ -220,61 +312,12 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
     );
   }
 
-  Widget _buildAddButton() {
-    return ElevatedButton.icon(
-      onPressed: () {
-        showDialog(
-          context: context,
-          barrierDismissible: true,
-          builder: (BuildContext context) => const TambahAlatPage(),
-        ).then((value) {
-          if (value == true) _fetchAlat();
-        });
-      },
-      icon: const Icon(Icons.add_circle, color: Colors.white),
-      label: const Text("Tambah Alat Baru"),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFF58220),
-        foregroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildListAlat() {
-    if (_foundAlat.isEmpty) return const Center(child: Text("Tidak ada data alat"));
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _foundAlat.length,
-      itemBuilder: (_, i) {
-        final item = _foundAlat[i];
-        return ItemCard(
-          title: item['nama_barang'] ?? '',
-          itemCode: item['kode_alat'] ?? '',
-          category: item['kategori']?['nama_kategori'] ?? 'Tanpa Kategori',
-          imageName: item['gambar_url'], 
-          onEdit: () {
-            showDialog(
-              context: context,
-              builder: (context) => EditAlatPage(data: item),
-            ).then((value) {
-              if (value == true) _fetchAlat();
-            });
-          },
-          onDelete: () async {
-            await supabase.from('Alat').delete().match({'alat_id': item['alat_id']});
-            _fetchAlat();
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildStatCard(String value, String label, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(15),
@@ -316,29 +359,28 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
   }
 }
 
-// --- ITEM CARD DENGAN FIX PATH GAMBAR ---
-
+// ================= ITEM CARD =================
 class ItemCard extends StatelessWidget {
-  final String title, itemCode, category;
-  final String? imageName;
-  final VoidCallback onEdit, onDelete;
+  final Map<String, dynamic> item;
+  final SupabaseClient supabase;
+  final VoidCallback fetchAlat;
+  final VoidCallback onEdit;
 
   const ItemCard({
     super.key,
-    required this.title,
-    required this.itemCode,
-    required this.category,
-    this.imageName,
+    required this.item,
+    required this.supabase,
+    required this.fetchAlat,
     required this.onEdit,
-    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Membersihkan nama file jika ada spasi di awal/akhir
-    String cleanName = imageName?.trim() ?? "tang_ampera.jpeg";
-    // Path aset (PASTIKAN TIDAK DOUBLE ASSETS/)
-    String assetPath = "assets/images/$cleanName";
+    final String title = item['nama_barang'] ?? '';
+    final String itemCode = item['kode_alat'] ?? '';
+    final String category =
+        item['kategori']?['nama_kategori'] ?? 'Tanpa Kategori';
+    final String? imagePath = item['gambar_url'];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -356,17 +398,16 @@ class ItemCard extends StatelessWidget {
               width: 85,
               height: 85,
               color: const Color(0xFFD9D9D9),
-              child: Image.asset(
-                assetPath,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  // Log error ke console jika file tidak ditemukan
-                  debugPrint("❌ Gagal muat: $assetPath");
-                  return const Center(
-                    child: Icon(Icons.broken_image, color: Colors.red),
-                  );
-                },
-              ),
+              child: imagePath != null && imagePath.isNotEmpty
+                  ? Image.network(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey,
+                      ),
+                    )
+                  : const Icon(Icons.image, color: Colors.grey),
             ),
           ),
           const SizedBox(width: 15),
@@ -376,7 +417,10 @@ class ItemCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
@@ -388,7 +432,10 @@ class ItemCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF58220),
                         borderRadius: BorderRadius.circular(10),
@@ -404,9 +451,68 @@ class ItemCard extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        _actionButton(Icons.edit_note, const Color(0xFFFBB074), onEdit),
+                        _actionButton(
+                          Icons.edit_note,
+                          const Color(0xFFFBB074),
+                          onEdit,
+                        ),
                         const SizedBox(width: 8),
-                        _actionButton(Icons.delete_outline, const Color(0xFFF47171), onDelete),
+                        _actionButton(
+                          Icons.delete_outline,
+                          const Color(0xFFF47171),
+                          () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text("Konfirmasi Hapus"),
+                                  content: const Text(
+                                    "Anda ingin menghapus alat ini?",
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: const Text("Tidak"),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFFF58220,
+                                        ),
+                                      ),
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      child: const Text("Iya"),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (confirm == true) {
+                              try {
+                                await supabase.from('Alat').delete().match({
+                                  'alat_id': item['alat_id'],
+                                });
+                                fetchAlat();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Alat berhasil dihapus!"),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Gagal menghapus: $e"),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
                       ],
                     ),
                   ],

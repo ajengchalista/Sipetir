@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 class EditCategoryForm extends StatefulWidget {
   final String initialNama;
   final String initialKeterangan;
-  // TAMBAHKAN LINE INI
-  final Function(String nama, String keterangan) onSave;
+  final Future<void> Function(String nama, String keterangan) onSave;
 
   const EditCategoryForm({
     super.key,
     required this.initialNama,
     required this.initialKeterangan,
-    required this.onSave, // DAN INI
+    required this.onSave,
   });
 
   @override
@@ -20,6 +19,7 @@ class EditCategoryForm extends StatefulWidget {
 class _EditCategoryFormState extends State<EditCategoryForm> {
   late TextEditingController namaController;
   late TextEditingController keteranganController;
+  bool isSaving = false;
 
   @override
   void initState() {
@@ -31,13 +31,20 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
   }
 
   @override
+  void dispose() {
+    namaController.dispose();
+    keteranganController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       backgroundColor: const Color(0xFFFEF2E8),
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(25.0),
+          padding: const EdgeInsets.all(25),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,10 +59,7 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
               ),
               const SizedBox(height: 20),
 
-              const Text(
-                "Nama Kategori",
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
+              const Text("Nama Kategori"),
               const SizedBox(height: 8),
               TextField(
                 controller: namaController,
@@ -66,22 +70,12 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Color(0xFFF58220)),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFF58220),
-                      width: 2,
-                    ),
-                  ),
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              const Text(
-                "Keterangan",
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
+              const Text("Keterangan"),
               const SizedBox(height: 8),
               TextField(
                 controller: keteranganController,
@@ -102,7 +96,7 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: isSaving ? null : () => Navigator.pop(context),
                       child: const Text(
                         "Batal",
                         style: TextStyle(color: Color(0xFFF58220)),
@@ -112,14 +106,31 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
                   const SizedBox(width: 15),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        // PANGGIL CALLBACK ON SAVE DISINI
-                        widget.onSave(
-                          namaController.text,
-                          keteranganController.text,
-                        );
-                        Navigator.pop(context);
-                      },
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              setState(() => isSaving = true);
+
+                              try {
+                                // WAJIB AWAIT BIAR DATA BENERAN KESIMPAN
+                                await widget.onSave(
+                                  namaController.text,
+                                  keteranganController.text,
+                                );
+
+                                if (mounted) {
+                                  Navigator.pop(context);
+                                }
+                              } catch (e) {
+                                setState(() => isSaving = false);
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Gagal menyimpan: $e'),
+                                  ),
+                                );
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF58220),
                       ),

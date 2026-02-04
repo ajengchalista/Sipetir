@@ -14,4 +14,6 @@ class AppColors {
 
   // Putih
   static const Color white = Colors.white;
+
+  static Color? get primary => null;
 }
