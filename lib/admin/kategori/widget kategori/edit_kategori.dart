@@ -25,7 +25,9 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
   void initState() {
     super.initState();
     namaController = TextEditingController(text: widget.initialNama);
-    keteranganController = TextEditingController(text: widget.initialKeterangan);
+    keteranganController = TextEditingController(
+      text: widget.initialKeterangan,
+    );
   }
 
   @override
@@ -49,7 +51,11 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
             children: [
               const Text(
                 "Edit Kategori",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFF58220)),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFF58220),
+                ),
               ),
               const SizedBox(height: 20),
               const Text("Nama Kategori"),
@@ -86,19 +92,40 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("Batal", style: TextStyle(color: Color(0xFFF58220))),
+                      child: const Text(
+                        "Batal",
+                        style: TextStyle(color: Color(0xFFF58220)),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        // Langsung kirim balik datanya tanpa tunggu Supabase di sini
-                        widget.onSave(namaController.text, keteranganController.text);
+                        if (namaController.text.isEmpty ||
+                            keteranganController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Field tidak boleh kosong"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        // Kirim data kembali ke halaman yang memanggil dialog ini
+                        widget.onSave(
+                          namaController.text,
+                          keteranganController.text,
+                        );
                         Navigator.pop(context);
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF58220)),
-                      child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF58220),
+                      ),
+                      child: const Text(
+                        "Simpan",
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                 ],

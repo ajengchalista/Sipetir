@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
 
       initialRoute: '/login',
       routes: {
-        '/login': (context) => const DashboardAdminPage(),
+        '/login': (context) => const DashboardPeminjamPage(),
 
         '/admin/dashboard': (context) => const DashboardAdminPage(),
         '/admin/kategori': (context) => const KategoriScreen(),

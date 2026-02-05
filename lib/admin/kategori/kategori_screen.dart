@@ -4,6 +4,7 @@ import 'package:sipetir/widgets/header_custom.dart';
 import 'package:sipetir/admin/halaman profil/profil_page.dart';
 import 'package:sipetir/admin/kategori/widget kategori/edit_kategori.dart';
 import 'package:sipetir/admin/kategori/widget%20kategori/tambah_kategori_baru.dart';
+import 'services/kategori_service.dart';
 
 class KategoriScreen extends StatefulWidget {
   const KategoriScreen({super.key});
@@ -15,6 +16,7 @@ class KategoriScreen extends StatefulWidget {
 class _KategoriScreenState extends State<KategoriScreen> {
   final supabase = Supabase.instance.client;
   final TextEditingController _searchController = TextEditingController();
+  final KategoriService _kategoriService = KategoriService();
 
   List<Map<String, dynamic>> categories = [];
   List<Map<String, dynamic>> filteredCategories = [];
@@ -68,24 +70,45 @@ class _KategoriScreenState extends State<KategoriScreen> {
     );
   }
 
+  // PERBAIKAN: Nama fungsi disamakan dan memanggil _ambilData()
   void _showEditDialog(Map<String, dynamic> kategori) {
     showDialog(
       context: context,
-      builder: (_) => EditCategoryForm(
-        initialNama: kategori['nama_kategori'] ?? '',
+      builder: (context) => EditCategoryForm(
+        initialNama: kategori['nama_kategori'],
         initialKeterangan: kategori['keterangan'] ?? '',
-        onSave: (nama, keterangan) async {
-          // PERBAIKAN UTAMA: Update tanpa .select() untuk menghindari TypeError Null
-          await supabase
-              .from('kategori')
-              .update({
-                'nama_kategori': nama, 
-                'keterangan': keterangan
-              })
-              .eq('id', kategori['id']);
+        onSave: (namaBaru, keteranganBaru) async {
+          // Ambil referensi messenger sebelum proses async dimulai
+          final messenger = ScaffoldMessenger.of(this.context);
+          
+          try {
+            await _kategoriService.updateKategori(
+              id: kategori['kategori_id'], 
+              nama: namaBaru,
+              keterangan: keteranganBaru,
+            );
 
-          // Refresh data setelah update berhasil
-          await _ambilData();
+            // Cek apakah widget masih aktif sebelum update UI
+            if (!mounted) return;
+            
+            _ambilData(); 
+
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text("Kategori berhasil diperbarui"), 
+                backgroundColor: Colors.green
+              ),
+            );
+          } catch (e) {
+            if (!mounted) return;
+            
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text("Gagal update: $e"), 
+                backgroundColor: Colors.red
+              ),
+            );
+          }
         },
       ),
     );
@@ -123,17 +146,32 @@ class _KategoriScreenState extends State<KategoriScreen> {
                     child: ElevatedButton(
                       onPressed: () async {
                         try {
+                          // PERBAIKAN: Menggunakan 'kategori_id' sesuai skema SQL
                           await supabase
                               .from('kategori')
                               .delete()
-                              .eq('id', kategori['id']);
+                              .eq('kategori_id', kategori['kategori_id']);
 
                           if (mounted) Navigator.pop(context);
                           _ambilData();
+                        } on PostgrestException catch (e) {
+                          String errorMsg = "Gagal hapus: ${e.message}";
+                          // Cek jika ada data di tabel Alat yang memakai kategori ini
+                          if (e.code == '23503') {
+                            errorMsg = "Kategori tidak bisa dihapus karena masih digunakan oleh beberapa alat.";
+                          }
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(errorMsg),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         } catch (e) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Gagal hapus: $e")),
+                              SnackBar(content: Text("Terjadi kesalahan: $e")),
                             );
                           }
                         }
@@ -257,7 +295,6 @@ class _KategoriScreenState extends State<KategoriScreen> {
   }
 }
 
-// Widget CategoryCard tetap sama dengan UI Anda sebelumnya
 class CategoryCard extends StatelessWidget {
   final String title;
   final String subtitle;

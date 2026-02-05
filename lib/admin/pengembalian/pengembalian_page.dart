@@ -7,6 +7,7 @@ import 'package:sipetir/admin/peminjaman/peminjaman_page.dart';
 import 'package:sipetir/admin/widgets/bottom_navbar.dart';
 import 'package:sipetir/admin/halaman profil/profil_page.dart';
 import 'package:sipetir/widgets/header_custom.dart';
+import 'widgets/edit_pengembalian_dialog.dart';
 
 class PengembalianPage extends StatefulWidget {
   const PengembalianPage({super.key});
@@ -18,13 +19,18 @@ class PengembalianPage extends StatefulWidget {
 class _PengembalianPageState extends State<PengembalianPage> {
   final SupabaseClient supabase = Supabase.instance.client;
   int _currentIndex = 3;
-  late final Stream<List<Map<String, dynamic>>> _pengembalianStream;
+  late Stream<List<Map<String, dynamic>>> _pengembalianStream;
   final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
 
   @override
   void initState() {
     super.initState();
-    // Mengaktifkan stream realtime dari tabel pengembalian
+    _initStream();
+  }
+
+  void _initStream() {
+    // Kita simpan ke variabel agar bisa di-refresh manual
     _pengembalianStream = supabase
         .from('pengembalian')
         .stream(primaryKey: ['kembali_id'])
@@ -36,43 +42,99 @@ class _PengembalianPageState extends State<PengembalianPage> {
     setState(() => _currentIndex = index);
     switch (index) {
       case 0:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardAdminPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
+        );
         break;
       case 1:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ManajemenAlatPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ManajemenAlatPage()),
+        );
         break;
       case 2:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PeminjamanPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PeminjamanPage()),
+        );
         break;
     }
   }
 
-  // --- FUNGSI UPDATE KE SUPABASE ---
-  Future<void> _updatePengembalian(dynamic id, Map<String, dynamic> updates) async {
+  Future<void> _updatePengembalian(
+    dynamic id,
+    Map<String, dynamic> updates,
+  ) async {
     try {
       await supabase.from('pengembalian').update(updates).eq('kembali_id', id);
-      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        Navigator.pop(context); // Tutup Dialog
+
+        // REFRESH DISINI: Paksa stream inisialisasi ulang
+        setState(() {
+          _initStream();
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data berhasil diperbarui'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update Gagal: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memperbarui: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  // --- FUNGSI DELETE DARI SUPABASE ---
   Future<void> _deleteData(dynamic id) async {
     try {
       await supabase.from('pengembalian').delete().eq('kembali_id', id);
+
       if (mounted) {
+        // REFRESH DISINI
+        setState(() {
+          _initStream();
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Data berhasil dihapus'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Data berhasil dihapus'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menghapus: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Gagal menghapus: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
+  }
+
+  void _showEditDialog(Map<String, dynamic> itemData) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return EditPengembalianDialog(
+          data: itemData,
+          onSave: _updatePengembalian,
+        );
+      },
+    );
   }
 
   void _showDeleteDialog(dynamic id) {
@@ -80,41 +142,30 @@ class _PengembalianPageState extends State<PengembalianPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Anda yakin ingin menghapusnya?", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 30),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFFF7A21)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: const Text("Tidak", style: TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () { Navigator.pop(context); _deleteData(id); },
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7A21), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: const Text("Iya", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        content: const Text(
+          "Anda yakin ingin menghapusnya?",
+          textAlign: TextAlign.center,
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Tidak"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteData(id);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Iya", style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final bool isWide = size.width > 600;
-
     return Scaffold(
       backgroundColor: const Color(0xFFFFF1E6),
       body: Column(
@@ -123,83 +174,112 @@ class _PengembalianPageState extends State<PengembalianPage> {
             children: [
               const HeaderCustom(title: 'Pengembalian', subtitle: 'Admin'),
               Positioned(
-                top: 50,
+                top: MediaQuery.of(context).padding.top + 10,
                 right: 20,
                 child: GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilPage())),
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
-                    child: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 35),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfilPage()),
+                  ),
+                  child: const CircleAvatar(
+                    backgroundColor: Colors.white24,
+                    child: Icon(
+                      Icons.account_circle_outlined,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          Expanded(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 800),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFF7A21).withOpacity(0.3)),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'Cari Pengembalian',
-                        prefixIcon: Icon(Icons.search, color: Color(0xFFFF7A21)),
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFFF7A21).withOpacity(0.3),
                 ),
-                Expanded(
-                  child: StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: _pengembalianStream,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: Color(0xFFFF7A21)));
-                      final data = snapshot.data!;
-                      if (data.isEmpty) return const Center(child: Text("Belum ada data pengembalian"));
-
-                      return GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: isWide ? 2 : 1,
-                          childAspectRatio: isWide ? 1.8 : 2.1,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 15,
-                        ),
-                        itemCount: data.length,
-                        itemBuilder: (context, index) {
-                          final item = data[index];
-                          return PengembalianCard(
-                            fullData: item,
-                            kode: item['pinjam_id']?.toString() ?? '-',
-                            nama: item['nama_kategori_admin'] ?? 'Alat Sipetir',
-                            status: item['kondisi_saat_dikembalikan'] ?? 'Baik',
-                            statusColor: (item['kondisi_saat_dikembalikan'] == 'Rusak') ? Colors.red : Colors.green,
-                            denda: item['denda'] != null ? 'Denda : Rp ${item['denda']}' : 'Tanpa Denda',
-                            tglKembali: item['tanggal_kembali_asli'] ?? '-',
-                            onDelete: () => _showDeleteDialog(item['kembali_id']),
-                            onEdit: () => showDialog(context: context, builder: (context) => EditPengembalianDialog(data: item, onSave: _updatePengembalian)),
-                          );
-                        },
-                      );
-                    },
-                  ),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value
+                        .toLowerCase(); // Simpan input ke variabel
+                  });
+                },
+                decoration: const InputDecoration(
+                  hintText:
+                      'Cari Berdasarkan ID atau Kondisi', // Hint lebih jelas
+                  prefixIcon: Icon(Icons.search, color: Color(0xFFFF7A21)),
+                  border: InputBorder.none,
                 ),
-              ],
+              ),
             ),
           ),
+          Expanded(
+  child: StreamBuilder<List<Map<String, dynamic>>>(
+    stream: _pengembalianStream,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator(color: Color(0xFFFF7A21)));
+      }
+
+      // 1. Ambil data mentah dari snapshot (sebelumnya bernama 'data')
+      final List<Map<String, dynamic>> rawData = snapshot.data ?? [];
+
+      // 2. Filter data berdasarkan input di Search Bar
+      final filteredData = rawData.where((item) {
+        final pinjamId = item['pinjam_id']?.toString().toLowerCase() ?? "";
+        final kondisi = item['kondisi_saat_dikembalikan']?.toString().toLowerCase() ?? "";
+        
+        // Cek apakah query ada di dalam pinjam_id atau kondisi
+        return pinjamId.contains(_searchQuery) || kondisi.contains(_searchQuery);
+      }).toList();
+
+      if (filteredData.isEmpty) {
+        return const Center(child: Text("Data tidak ditemukan"));
+      }
+
+      return RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            _initStream();
+          });
+        },
+        color: const Color(0xFFFF7A21),
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          itemCount: filteredData.length, // Gunakan hasil filter
+          itemBuilder: (context, index) {
+            final item = filteredData[index]; // Gunakan hasil filter
+            return PengembalianCard(
+              fullData: item,
+              kode: "ID: ${item['pinjam_id']}",
+              nama: "Alat Sipetir",
+              status: item['kondisi_saat_dikembalikan'] ?? 'Baik',
+              statusColor: (item['kondisi_saat_dikembalikan'] == 'Rusak') ? Colors.red : Colors.green,
+              denda: (item['denda'] == null || item['denda'] == 0) ? 'Tanpa Denda' : 'Denda: Rp ${item['denda']}',
+              tglKembali: item['tanggal_kembali_asli'] ?? '-',
+              onDelete: () => _showDeleteDialog(item['kembali_id']),
+              onEdit: () => _showEditDialog(item),
+            );
+          },
+        ),
+      );
+    },
+  ),
+),
         ],
       ),
-      bottomNavigationBar: AdminBottomNavbar(currentIndex: _currentIndex, onTap: _onNavTapped),
+      bottomNavigationBar: AdminBottomNavbar(
+        currentIndex: _currentIndex,
+        onTap: _onNavTapped,
+      ),
     );
   }
 }
@@ -210,7 +290,18 @@ class PengembalianCard extends StatelessWidget {
   final VoidCallback onDelete, onEdit;
   final Map<String, dynamic> fullData;
 
-  const PengembalianCard({super.key, required this.kode, required this.nama, required this.status, required this.statusColor, required this.denda, required this.tglKembali, required this.onDelete, required this.onEdit, required this.fullData});
+  const PengembalianCard({
+    super.key,
+    required this.kode,
+    required this.nama,
+    required this.status,
+    required this.statusColor,
+    required this.denda,
+    required this.tglKembali,
+    required this.onDelete,
+    required this.onEdit,
+    required this.fullData,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +312,13 @@ class PengembalianCard extends StatelessWidget {
         color: const Color(0xFFFFFDF8),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFFF7A21).withOpacity(0.3)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,33 +326,119 @@ class PengembalianCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(kode, style: const TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold, fontSize: 16)),
+              Flexible(
+                child: Text(
+                  kode,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFFF7A21),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: statusColor.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                child: Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("Unit dikembalikan", style: TextStyle(color: Colors.grey, fontSize: 12)), Text(nama, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))])),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("Tgl kembali", style: TextStyle(color: Colors.grey, fontSize: 12)), Text(tglKembali, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))]),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Unit dikembalikan",
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                    Text(
+                      nama,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      "Tgl kembali",
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                    Text(
+                      tglKembali,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Colors.black12),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(denda, style: TextStyle(color: denda.contains('Rp') ? Colors.red : Colors.black45, fontWeight: FontWeight.w600, fontSize: 13)),
+              Flexible(
+                child: Text(
+                  denda,
+                  style: TextStyle(
+                    color: denda.contains('Rp 0') || denda == 'Tanpa Denda'
+                        ? Colors.green
+                        : Colors.red,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
               Row(
                 children: [
-                  _actionIcon(Icons.visibility, const Color(0xFFFF7A21), () => Navigator.push(context, MaterialPageRoute(builder: (context) => DetailPengembalianPage(item: fullData)))),
-                  const SizedBox(width: 6),
-                  _actionIcon(Icons.edit_outlined, const Color(0xFFFF7A21), onEdit),
-                  const SizedBox(width: 6),
+                  _actionIcon(Icons.visibility, const Color(0xFFFF7A21), () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            DetailPengembalianPage(item: fullData),
+                      ),
+                    );
+                  }),
+                  const SizedBox(width: 8),
+                  _actionIcon(
+                    Icons.edit_outlined,
+                    const Color(0xFFFF7A21),
+                    onEdit,
+                  ),
+                  const SizedBox(width: 8),
                   _actionIcon(Icons.delete_outline, Colors.red, onDelete),
                 ],
               ),
@@ -267,66 +450,17 @@ class PengembalianCard extends StatelessWidget {
   }
 
   Widget _actionIcon(IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(onTap: onTap, child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 20)));
-  }
-}
-
-class EditPengembalianDialog extends StatefulWidget {
-  final Map<String, dynamic> data;
-  final Function(dynamic id, Map<String, dynamic> updates) onSave;
-  const EditPengembalianDialog({super.key, required this.data, required this.onSave});
-
-  @override
-  State<EditPengembalianDialog> createState() => _EditPengembalianDialogState();
-}
-
-class _EditPengembalianDialogState extends State<EditPengembalianDialog> {
-  late TextEditingController _tglController, _kondisiController, _dendaController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tglController = TextEditingController(text: widget.data['tanggal_kembali_asli'] ?? '');
-    _kondisiController = TextEditingController(text: widget.data['kondisi_saat_dikembalikan'] ?? '');
-    _dendaController = TextEditingController(text: widget.data['denda']?.toString() ?? '0');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.all(25),
-        decoration: BoxDecoration(color: const Color(0xFFFFF7F2), borderRadius: BorderRadius.circular(40)),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Edit pengembalian", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
-              _buildField("Tgl kembali", _tglController),
-              _buildField("Kondisi", _kondisiController),
-              _buildField("Denda", _dendaController),
-              const SizedBox(height: 30),
-              Row(
-                children: [
-                  Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFFF7A21)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: const Text("Batal", style: TextStyle(color: Color(0xFFFF7A21))))),
-                  const SizedBox(width: 15),
-                  Expanded(child: ElevatedButton(onPressed: () => widget.onSave(widget.data['kembali_id'], {'tanggal_kembali_asli': _tglController.text, 'kondisi_saat_dikembalikan': _kondisiController.text, 'denda': int.tryParse(_dendaController.text) ?? 0}), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7A21), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: const Text("Simpan", style: TextStyle(color: Colors.white)))),
-                ],
-              ),
-            ],
-          ),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
+        child: Icon(icon, color: color, size: 18),
       ),
     );
-  }
-
-  Widget _buildField(String label, TextEditingController controller) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(padding: const EdgeInsets.only(top: 12, bottom: 5), child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
-      Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFF7A21).withOpacity(0.3))), child: TextField(controller: controller, decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 12)))),
-    ]);
   }
 }

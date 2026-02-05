@@ -34,9 +34,16 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
+      // Memanggil semua kolom Alat dan join dengan tabel kategori
       final data = await supabase
           .from('Alat')
-          .select('*, kategori(nama_kategori)')
+          .select('''
+          *,
+          kategori:kategori_id (
+            kategori_id,
+            nama_kategori
+          )
+        ''')
           .order('updated_at', ascending: false);
 
       if (mounted) {
@@ -71,25 +78,31 @@ class _ManajemenAlatPageState extends State<ManajemenAlatPage> {
       String? imageUrl;
 
       if (dataDariDialog['file_gambar'] != null) {
+        // Sesuai permintaan sebelumnya, bucket: 'media_alat' atau 'GAMBAR_ALAT.'?
+        // Saya asumsikan 'media_alat' agar konsisten dengan pesan sebelumnya
+        const String bucketName = 'media_alat';
         final String fileName =
             'alat_${DateTime.now().millisecondsSinceEpoch}.png';
 
         await supabase.storage
-            .from('GAMBAR_ALAT.')
+            .from(bucketName)
             .uploadBinary(
               fileName,
               dataDariDialog['file_gambar'] as Uint8List,
               fileOptions: const FileOptions(contentType: 'image/png'),
             );
 
-        imageUrl = supabase.storage.from('GAMBAR_ALAT.').getPublicUrl(fileName);
+        imageUrl = supabase.storage.from(bucketName).getPublicUrl(fileName);
       }
 
+      // Insert ke tabel Alat
       await supabase.from('Alat').insert({
         'nama_barang': dataDariDialog['nama'],
         'kode_alat': dataDariDialog['kode'],
-        'kategori_id': dataDariDialog['kategori_id'],
+        'kategori_id':
+            dataDariDialog['kategori_id'], // Menggunakan UUID dari dropdown
         'gambar_url': imageUrl,
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
       await _fetchAlat();
@@ -495,20 +508,47 @@ class ItemCard extends StatelessWidget {
                                 await supabase.from('Alat').delete().match({
                                   'alat_id': item['alat_id'],
                                 });
+
                                 fetchAlat();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Alat berhasil dihapus!"),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Alat berhasil dihapus!"),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } on PostgrestException catch (e) {
+                                // VALIDASI FOREIGN KEY (FK)
+                                String message = "Gagal menghapus data.";
+
+                                // Code 23503 adalah standar Postgres untuk Foreign Key Violation
+                                if (e.code == '23503') {
+                                  message =
+                                      "Alat tidak bisa dihapus karena masih terkait dengan data lain.";
+                                } else if (e.code == '42703') {
+                                  message =
+                                      "Kesalahan Database: Kolom tidak ditemukan pada trigger log.";
+                                }
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(message),
+                                      backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 4),
+                                    ),
+                                  );
+                                }
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text("Gagal menghapus: $e"),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Terjadi kesalahan: $e"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               }
                             }
                           },

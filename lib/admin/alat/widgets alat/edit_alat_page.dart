@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,6 +14,7 @@ class EditAlatPage extends StatefulWidget {
 class _EditAlatPageState extends State<EditAlatPage> {
   late TextEditingController namaController;
   late TextEditingController kodeController;
+  List<Map<String, dynamic>> listKategoriDB = [];
 
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedXFile;
@@ -29,27 +27,26 @@ class _EditAlatPageState extends State<EditAlatPage> {
     'Keselamatan Kerja (K3)',
   ];
 
-  String? selectedKategori;
+  String? selectedKategoriId;
   String? imageUrl;
 
   @override
   void initState() {
     super.initState();
-    // Mengambil data awal
-    namaController = TextEditingController(
-      text: widget.data['nama_barang'] ?? "",
-    );
-    kodeController = TextEditingController(
-      text: widget.data['kode_alat'] ?? "",
-    );
+    // Inisialisasi data awal
+    namaController = TextEditingController(text: widget.data['nama_barang']);
+    kodeController = TextEditingController(text: widget.data['kode_alat']);
     imageUrl = widget.data['gambar_url'];
+    selectedKategoriId = widget.data['kategori_id']; // ID yang sudah ada di baris data
+    
+    _loadKategori(); // Panggil fungsi ambil kategori
+  }
 
-    // Inisialisasi kategori
-    String kategoriAwal =
-        widget.data['kategori']?.toString() ?? 'Alat Ukur Listrik';
-    selectedKategori = daftarKategori.contains(kategoriAwal)
-        ? kategoriAwal
-        : daftarKategori[0];
+  Future<void> _loadKategori() async {
+    final data = await Supabase.instance.client.from('kategori').select();
+    setState(() {
+      listKategoriDB = List<Map<String, dynamic>>.from(data);
+    });
   }
 
   @override
@@ -69,75 +66,41 @@ class _EditAlatPageState extends State<EditAlatPage> {
   }
 
   Future<void> _updateData() async {
-    // 1. PERBAIKAN ID: Mencari ID dengan segala kemungkinan nama field
-    final dynamic idAlat =
-        widget.data['id'] ??
-        widget.data['id_alat'] ??
-        widget.data['id_barang'] ??
-        widget.data['item_id'];
+  setState(() => _isUploading = true);
 
-    if (idAlat == null) {
-      _showSnackBar(
-        "Error: Data ID tidak terbaca! Pastikan 'id' ada di tabel.",
-        Colors.red,
+  try {
+    final supabase = Supabase.instance.client;
+    String? finalImageUrl = imageUrl;
+    const String myBucket = 'media_alat'; // Nama bucket sesuai permintaan
+
+    if (_selectedXFile != null) {
+      final bytes = await _selectedXFile!.readAsBytes();
+      final path = 'alat/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      await supabase.storage.from(myBucket).uploadBinary(
+        path, 
+        bytes,
+        fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true)
       );
-      return;
+      finalImageUrl = supabase.storage.from(myBucket).getPublicUrl(path);
     }
 
-    setState(() => _isUploading = true);
+    // CRUD Update: Panggil nama kolom sesuai tabel Alat
+    await supabase.from('Alat').update({
+      'nama_barang': namaController.text,
+      'kode_alat': kodeController.text,
+      'kategori_id': selectedKategoriId, // ID hasil pilihan dropdown dinamis
+      'gambar_url': finalImageUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('alat_id', widget.data['alat_id']); // Pakai kolom alat_id
 
-    try {
-      final supabase = Supabase.instance.client;
-      String? finalImageUrl = imageUrl;
-
-      // 2. PERBAIKAN BUCKET: Nama harus 'GAMBAR_ALAT' sesuai dashboard
-      const String myBucket = 'GAMBAR_ALAT';
-
-      if (_selectedXFile != null) {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final path = 'alat/$fileName';
-
-        if (kIsWeb) {
-          final bytes = await _selectedXFile!.readAsBytes();
-          await supabase.storage
-              .from(myBucket)
-              .uploadBinary(
-                path,
-                bytes,
-                fileOptions: const FileOptions(
-                  contentType: 'image/jpeg',
-                  upsert: true,
-                ),
-              );
-        } else {
-          await supabase.storage
-              .from(myBucket)
-              .upload(path, _selectedXFile!.path as File);
-        }
-        finalImageUrl = supabase.storage.from(myBucket).getPublicUrl(path);
-      }
-
-      // 3. Update ke Tabel 'alat'
-      await supabase
-          .from('alat')
-          .update({
-            'nama_barang': namaController.text,
-            'kode_alat': kodeController.text,
-            'kategori': selectedKategori,
-            'gambar_url': finalImageUrl,
-          })
-          .eq('id', idAlat);
-
-      if (mounted) {
-        Navigator.pop(context, true);
-        _showSnackBar("Berhasil memperbarui data!", Colors.green);
-      }
-    } catch (e) {
-      if (mounted) _showSnackBar("Gagal: $e", Colors.red);
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
-    }
+    if (mounted) Navigator.pop(context, true);
+  } catch (e) {
+    _showSnackBar("Gagal: $e", Colors.red);
+  } finally {
+    if (mounted) setState(() => _isUploading = false);
   }
+}
 
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(
@@ -272,29 +235,27 @@ class _EditAlatPageState extends State<EditAlatPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFF39C12).withOpacity(0.5)),
+            border: Border.all(color: Colors.orange.withOpacity(0.5)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: selectedKategori,
+              value: selectedKategoriId, // Pakai ID sebagai value internal
               isExpanded: true,
-              items: daftarKategori
-                  .map((String v) => DropdownMenuItem(value: v, child: Text(v)))
-                  .toList(),
-              onChanged: (val) => setState(() => selectedKategori = val),
+              hint: const Text("Pilih Kategori"),
+              items: listKategoriDB.map((kat) {
+                return DropdownMenuItem<String>(
+                  value: kat['kategori_id'].toString(), // ID kolom
+                  child: Text(kat['nama_kategori'].toString()), // Nama yang tampil
+                );
+              }).toList(),
+              onChanged: (val) => setState(() => selectedKategoriId = val),
             ),
           ),
         ),

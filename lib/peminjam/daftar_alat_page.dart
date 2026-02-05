@@ -1,192 +1,140 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DaftarAlatPage extends StatefulWidget {
-  final VoidCallback onPinjam; // callback ke dashboard
-  const DaftarAlatPage({super.key, required this.onPinjam});
+  final Function(Map<String, dynamic>) onTambahKeranjang; 
+  const DaftarAlatPage({super.key, required this.onTambahKeranjang});
 
   @override
   State<DaftarAlatPage> createState() => _DaftarAlatPageState();
 }
 
 class _DaftarAlatPageState extends State<DaftarAlatPage> {
+  final SupabaseClient supabase = Supabase.instance.client;
+  String _searchQuery = "";
+
+  // Query stream dengan join ke tabel kategori
+  late final Stream<List<Map<String, dynamic>>> _alatStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _alatStream = supabase
+        .from('Alat')
+        .stream(primaryKey: ['alat_id'])
+        .order('nama_barang');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header & Search Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Daftar Alat',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFFF7A21),
-                ),
-              ),
+              const Text('Daftar Alat', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
               const SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Cari Nama Alat / kode alat',
-                        hintStyle: const TextStyle(
-                          color: Color(0xFFFFB385),
-                          fontSize: 13,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Color(0xFFFFB385),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFFFB385),
-                          ),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                    ),
+              TextField(
+                onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+                decoration: InputDecoration(
+                  hintText: 'Cari Nama atau Kode Alat...',
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFFFFB385)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: Color(0xFFFFB385)),
                   ),
-                  const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFE5D1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFB385)),
-                    ),
-                    child: const Icon(
-                      Icons.tune,
-                      color: Color(0xFFFF7A21),
-                      size: 20,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
         ),
+        
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            children: [
-              _buildAlatCard('Sarung Tangan Listrik', 'Keselamatan Kerja (K3)'),
-              _buildAlatCard('Megger (Insulation Tester)', 'Alat Ukur Listrik'),
-              _buildAlatCard('Dial Indicator', 'Peralatan Mekanik'),
-              _buildAlatCard('Kunci Torsi', 'Peralatan Mekanik'),
-              _buildAlatCard('Watt Meter', 'Alat Ukur Listrik'),
-              _buildAlatCard('pH Meter', 'Alat Analisis & Quality Check'),
-              const SizedBox(height: 100), // Space agar tidak tertutup navbar
-            ],
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _alatStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text("Tidak ada alat tersedia"));
+              }
+
+              // Filter Search
+              final items = snapshot.data!.where((alat) {
+                final nama = alat['nama_barang'].toString().toLowerCase();
+                final kode = alat['kode_alat'].toString().toLowerCase();
+                return nama.contains(_searchQuery) || kode.contains(_searchQuery);
+              }).toList();
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final alat = items[index];
+                  return _buildAlatCard(alat);
+                },
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAlatCard(String nama, String kategori) {
+  Widget _buildAlatCard(Map<String, dynamic> alat) {
+    bool isTersedia = alat['status_barang'] == 'tersedia';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFB385)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFFFFB385).withOpacity(0.5)),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD1FAE5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Tersedia',
-                style: TextStyle(
-                  color: Color(0xFF10B981),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                nama,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Color(0xFF4A4A4A),
+              Text(alat['kode_alat'], style: const TextStyle(color: Colors.grey, fontSize: 10)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isTersedia ? const Color(0xFFD1FAE5) : Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  isTersedia ? 'Tersedia' : 'Dipinjam',
+                  style: TextStyle(color: isTersedia ? const Color(0xFF10B981) : Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFE5D1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      kategori,
-                      style: const TextStyle(
-                        color: Color(0xFFFF7A21),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: widget.onPinjam,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 25,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFE5D1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFFB385)),
-                      ),
-                      child: const Text(
-                        'Pinjam',
-                        style: TextStyle(
-                          color: Color(0xFFFF7A21),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text(alat['nama_barang'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Kategori: Alat Teknik", style: TextStyle(fontSize: 12, color: Colors.blueGrey)), // Note: Join kategori butuh query terpisah atau view
+              ElevatedButton(
+                onPressed: isTersedia ? () => widget.onTambahKeranjang(alat) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFE5D1),
+                  foregroundColor: const Color(0xFFFF7A21),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Pinjam'),
               ),
             ],
           ),
