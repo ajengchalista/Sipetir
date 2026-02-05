@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class EditCategoryForm extends StatefulWidget {
   final String initialNama;
   final String initialKeterangan;
-  final Future<void> Function(String nama, String keterangan) onSave;
+  // Kita ubah onSave agar hanya mengirim data, bukan Future
+  final Function(String nama, String keterangan) onSave;
 
   const EditCategoryForm({
     super.key,
@@ -19,15 +20,12 @@ class EditCategoryForm extends StatefulWidget {
 class _EditCategoryFormState extends State<EditCategoryForm> {
   late TextEditingController namaController;
   late TextEditingController keteranganController;
-  bool isSaving = false;
 
   @override
   void initState() {
     super.initState();
     namaController = TextEditingController(text: widget.initialNama);
-    keteranganController = TextEditingController(
-      text: widget.initialKeterangan,
-    );
+    keteranganController = TextEditingController(text: widget.initialKeterangan);
   }
 
   @override
@@ -51,14 +49,9 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
             children: [
               const Text(
                 "Edit Kategori",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFF58220),
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFF58220)),
               ),
               const SizedBox(height: 20),
-
               const Text("Nama Kategori"),
               const SizedBox(height: 8),
               TextField(
@@ -72,9 +65,7 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 20),
-
               const Text("Keterangan"),
               const SizedBox(height: 8),
               TextField(
@@ -89,55 +80,25 @@ class _EditCategoryFormState extends State<EditCategoryForm> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
-
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: isSaving ? null : () => Navigator.pop(context),
-                      child: const Text(
-                        "Batal",
-                        style: TextStyle(color: Color(0xFFF58220)),
-                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Batal", style: TextStyle(color: Color(0xFFF58220))),
                     ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: isSaving
-                          ? null
-                          : () async {
-                              setState(() => isSaving = true);
-
-                              try {
-                                // WAJIB AWAIT BIAR DATA BENERAN KESIMPAN
-                                await widget.onSave(
-                                  namaController.text,
-                                  keteranganController.text,
-                                );
-
-                                if (mounted) {
-                                  Navigator.pop(context);
-                                }
-                              } catch (e) {
-                                setState(() => isSaving = false);
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Gagal menyimpan: $e'),
-                                  ),
-                                );
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF58220),
-                      ),
-                      child: const Text(
-                        "Simpan",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      onPressed: () {
+                        // Langsung kirim balik datanya tanpa tunggu Supabase di sini
+                        widget.onSave(namaController.text, keteranganController.text);
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF58220)),
+                      child: const Text("Simpan", style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 ],

@@ -171,12 +171,10 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
           height: 55,
           child: ElevatedButton.icon(
             onPressed: () async {
-              // Menunggu hasil dari halaman tambah user
               final res = await showDialog(
                 context: context,
                 builder: (_) => AddUserPage(orange: orange, bg: bgKrem),
               );
-              // Jika berhasil tambah (res == true), refresh list
               if (res == true) _fetchUsers();
             },
             icon: const Icon(
@@ -210,8 +208,7 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors
-            .white, // Sedikit diubah agar card terlihat jelas di atas bgKrem
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: orange.withOpacity(0.3)),
       ),
@@ -279,9 +276,6 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    // KUNCI PERBAIKAN: Gunakan Navigator.push (jika EditUserPage adalah Page)
-                    // atau showDialog (jika EditUserPage adalah Dialog)
-                    // Disini saya asumsikan Page karena sebelumnya Anda mengirim parameter userData
                     final res = await Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -289,7 +283,6 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                       ),
                     );
 
-                    // Jika hasil dari halaman edit adalah true, panggil ulang data
                     if (res == true) {
                       _fetchUsers();
                     }
@@ -321,7 +314,18 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                             .from('users')
                             .delete()
                             .eq('id', userData['id']);
-                        _fetchUsers(); // Refresh setelah hapus
+
+                        // MENAMPILKAN NOTIFIKASI BERHASIL
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("User berhasil dihapus"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                        
+                        _fetchUsers(); 
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

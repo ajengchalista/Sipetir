@@ -28,7 +28,6 @@ class _KategoriScreenState extends State<KategoriScreen> {
 
   Future<void> _ambilData() async {
     setState(() => isLoading = true);
-
     try {
       final data = await supabase
           .from('kategori')
@@ -38,11 +37,12 @@ class _KategoriScreenState extends State<KategoriScreen> {
       categories = List<Map<String, dynamic>>.from(data);
       filteredCategories = List.from(categories);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal mengambil data: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengambil data: $e')),
+        );
+      }
     }
-
     setState(() => isLoading = false);
   }
 
@@ -75,12 +75,16 @@ class _KategoriScreenState extends State<KategoriScreen> {
         initialNama: kategori['nama_kategori'] ?? '',
         initialKeterangan: kategori['keterangan'] ?? '',
         onSave: (nama, keterangan) async {
+          // PERBAIKAN UTAMA: Update tanpa .select() untuk menghindari TypeError Null
           await supabase
               .from('kategori')
-              .update({'nama_kategori': nama, 'keterangan': keterangan})
-              .eq('id', kategori['id'])
-              .select(); // ⬅️ WAJIB BIAR GA NULL
+              .update({
+                'nama_kategori': nama, 
+                'keterangan': keterangan
+              })
+              .eq('id', kategori['id']);
 
+          // Refresh data setelah update berhasil
           await _ambilData();
         },
       ),
@@ -118,13 +122,21 @@ class _KategoriScreenState extends State<KategoriScreen> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                        await supabase
-                            .from('kategori')
-                            .delete()
-                            .eq('id', kategori['id']);
+                        try {
+                          await supabase
+                              .from('kategori')
+                              .delete()
+                              .eq('id', kategori['id']);
 
-                        Navigator.pop(context);
-                        _ambilData();
+                          if (mounted) Navigator.pop(context);
+                          _ambilData();
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Gagal hapus: $e")),
+                            );
+                          }
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF58220),
@@ -157,10 +169,7 @@ class _KategoriScreenState extends State<KategoriScreen> {
                 top: 50,
                 left: 10,
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.white,
-                  ),
+                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
@@ -185,60 +194,60 @@ class _KategoriScreenState extends State<KategoriScreen> {
           ),
           Expanded(
             child: isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Color(0xFFF58220)),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 15),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(color: Colors.orange.shade200),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: _searchKategori,
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              icon: Icon(Icons.search, color: Colors.orange),
-                              hintText: 'Cari Nama kategori / nama alat',
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFFF58220)))
+                : RefreshIndicator(
+                    onRefresh: _ambilData,
+                    color: const Color(0xFFF58220),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 15),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: Colors.orange.shade200),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: _searchKategori,
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                icon: Icon(Icons.search, color: Colors.orange),
+                                hintText: 'Cari Nama kategori / nama alat',
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 15),
-                        ElevatedButton.icon(
-                          onPressed: _showAddDialog,
-                          icon: const Icon(
-                            Icons.add_circle,
-                            color: Colors.white,
+                          const SizedBox(height: 15),
+                          ElevatedButton.icon(
+                            onPressed: _showAddDialog,
+                            icon: const Icon(Icons.add_circle, color: Colors.white),
+                            label: const Text(
+                              'tambah kategori baru',
+                              style: TextStyle(color: Color(0xFFFFF1CC)),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF58220),
+                              minimumSize: const Size(double.infinity, 55),
+                            ),
                           ),
-                          label: const Text(
-                            'tambah kategori baru',
-                            style: TextStyle(color: Color(0xFFFFF1CC)),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF58220),
-                            minimumSize: const Size(double.infinity, 55),
-                          ),
-                        ),
-                        const SizedBox(height: 25),
-                        if (filteredCategories.isEmpty)
-                          const Text('Tidak ada kategori tersedia')
-                        else
-                          ...filteredCategories.map((item) {
-                            return CategoryCard(
-                              title: item['nama_kategori'] ?? '-',
-                              subtitle: item['keterangan'] ?? '-',
-                              count: 'Alat Aktif',
-                              onEdit: () => _showEditDialog(item),
-                              onDelete: () => _showDeleteDialog(item),
-                            );
-                          }),
-                      ],
+                          const SizedBox(height: 25),
+                          if (filteredCategories.isEmpty)
+                            const Text('Tidak ada kategori tersedia')
+                          else
+                            ...filteredCategories.map((item) {
+                              return CategoryCard(
+                                title: item['nama_kategori'] ?? '-',
+                                subtitle: item['keterangan'] ?? '-',
+                                count: 'Alat Aktif',
+                                onEdit: () => _showEditDialog(item),
+                                onDelete: () => _showDeleteDialog(item),
+                              );
+                            }),
+                        ],
+                      ),
                     ),
                   ),
           ),
@@ -248,6 +257,7 @@ class _KategoriScreenState extends State<KategoriScreen> {
   }
 }
 
+// Widget CategoryCard tetap sama dengan UI Anda sebelumnya
 class CategoryCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -283,37 +293,19 @@ class CategoryCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17,
-                      ),
-                    ),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.black54,
-                      ),
-                    ),
+                    Text(subtitle, style: const TextStyle(fontSize: 13, color: Colors.black54)),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFBB074),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: Text(
-                  count,
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                ),
+                child: Text(count, style: const TextStyle(color: Colors.white, fontSize: 10)),
               ),
             ],
           ),
@@ -332,10 +324,7 @@ class CategoryCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onDelete,
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  label: const Text(
-                    'Hapus',
-                    style: TextStyle(color: Colors.red),
-                  ),
+                  label: const Text('Hapus', style: TextStyle(color: Colors.red)),
                 ),
               ),
             ],
