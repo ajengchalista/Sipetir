@@ -41,10 +41,10 @@ class LoginCard extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          const Text("Username", style: TextStyle(color: Colors.white)),
+          const Text("Email", style: TextStyle(color: Colors.white)),
           const SizedBox(height: 6),
           LoginTextField(
-            hint: "Username",
+            hint: "Masukkan email anda",
             controller: emailController,
           ),
 

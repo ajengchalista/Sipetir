@@ -3,6 +3,7 @@ import 'package:sipetir/peminjam/manajemen_peminjaman_page.dart';
 import 'package:sipetir/peminjam/pengembalian_page.dart';
 import 'package:sipetir/widgets/header_custom.dart';
 import 'package:sipetir/peminjam/widgets/bottom_navbar.dart';
+import '../keranjang_page.dart';
 
 class DashboardPeminjamPage extends StatefulWidget {
   const DashboardPeminjamPage({super.key});
@@ -13,7 +14,6 @@ class DashboardPeminjamPage extends StatefulWidget {
 
 class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
   int _currentIndex = 0;
-  int _jumlahKeranjang = 0;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -25,6 +25,7 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
   ];
 
   List<Map<String, String>> _filteredAlatList = [];
+  List<Map<String, dynamic>> _keranjangItems = [];
 
   @override
   void initState() {
@@ -42,9 +43,23 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
     });
   }
 
-  void _tambahKeranjang() {
+  void _tambahKeKeranjang(Map<String, dynamic> alat) {
     setState(() {
-      _jumlahKeranjang += 1;
+      _keranjangItems.add(alat);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${alat['nama_barang']} ditambah ke keranjang'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
+  // Fungsi untuk mengosongkan keranjang setelah checkout
+  void _bersihkanKeranjang() {
+    setState(() {
+      _keranjangItems.clear();
     });
   }
 
@@ -79,13 +94,18 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
       case 0:
         return _buildMainDashboard();
       case 1:
-        return DaftarAlatPage(onPinjam: _tambahKeranjang);
+        // Kirim fungsi tambah ke DaftarAlatPage
+        return DaftarAlatPage(onTambahKeranjang: _tambahKeKeranjang, onPinjam: () {  },);
       case 2:
         return const PeminjamanContentView();
       case 3:
         return const PengembalianPage();
       case 4:
-        return KeranjangPageWithoutAppBar(jumlah: _jumlahKeranjang);
+        // PERBAIKAN: Tampilkan KeranjangPage yang sesungguhnya
+        return KeranjangPage(
+          keranjangItems: _keranjangItems, 
+          onClear: _bersihkanKeranjang
+        );
       default:
         return _buildMainDashboard();
     }
@@ -97,12 +117,9 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
       backgroundColor: const Color(0xFFFFF1E6),
       bottomNavigationBar: PeminjamNavbar(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        jumlahKeranjang: _jumlahKeranjang, // badge di navbar
+        onTap: (index) => setState(() => _currentIndex = index),
+        // Ambil jumlah dari panjang list
+        jumlahKeranjang: _keranjangItems.length, 
       ),
       body: SafeArea(
         child: Column(
@@ -289,7 +306,7 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
 // ------------------ DAFTAR ALAT PAGE ------------------
 class DaftarAlatPage extends StatefulWidget {
   final VoidCallback onPinjam;
-  const DaftarAlatPage({super.key, required this.onPinjam});
+  const DaftarAlatPage({super.key, required this.onPinjam, required void Function(Map<String, dynamic> alat) onTambahKeranjang});
 
   @override
   State<DaftarAlatPage> createState() => _DaftarAlatPageState();

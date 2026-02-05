@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DaftarAlatPage extends StatefulWidget {
+  // Change this to match the parameter name you are using in Dashboard
   final Function(Map<String, dynamic>) onTambahKeranjang; 
+  
   const DaftarAlatPage({super.key, required this.onTambahKeranjang});
 
   @override
@@ -89,57 +91,83 @@ class _DaftarAlatPageState extends State<DaftarAlatPage> {
   }
 
   Widget _buildAlatCard(Map<String, dynamic> alat) {
-    bool isTersedia = alat['status_barang'] == 'tersedia';
+  bool isTersedia = alat['status_barang'] == 'tersedia';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFB385).withOpacity(0.5)),
+  return Container(
+    margin: const EdgeInsets.only(bottom: 15),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: const Color(0xFFFFB385).withOpacity(0.5)),
+    ),
+    // Bungkus isi Container dengan GestureDetector jika ingin satu kartu bisa diklik
+    child: GestureDetector(
+      onTap: isTersedia ? () => widget.onTambahKeranjang(alat) : null,
+      child: Padding(
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Row untuk Kode Alat dan Status
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  alat['kode_alat'] ?? '-', 
+                  style: const TextStyle(color: Colors.grey, fontSize: 10),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isTersedia ? const Color(0xFFD1FAE5) : Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isTersedia ? 'Tersedia' : 'Dipinjam',
+                    style: TextStyle(
+                      color: isTersedia ? const Color(0xFF10B981) : Colors.red,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            // Nama Barang
+            Text(
+              alat['nama_barang'] ?? 'Tanpa Nama',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            // Row untuk Kategori dan Tombol
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Kategori: Alat Teknik",
+                  style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+                ),
+                ElevatedButton(
+                  // Tombol otomatis mati (greyed out) jika status tidak tersedia
+                  onPressed: isTersedia ? () => widget.onTambahKeranjang(alat) : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFE5D1),
+                    foregroundColor: const Color(0xFFFF7A21),
+                    disabledBackgroundColor: Colors.grey.shade200,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Pinjam'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(alat['kode_alat'], style: const TextStyle(color: Colors.grey, fontSize: 10)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isTersedia ? const Color(0xFFD1FAE5) : Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  isTersedia ? 'Tersedia' : 'Dipinjam',
-                  style: TextStyle(color: isTersedia ? const Color(0xFF10B981) : Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Text(alat['nama_barang'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Kategori: Alat Teknik", style: TextStyle(fontSize: 12, color: Colors.blueGrey)), // Note: Join kategori butuh query terpisah atau view
-              ElevatedButton(
-                onPressed: isTersedia ? () => widget.onTambahKeranjang(alat) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFE5D1),
-                  foregroundColor: const Color(0xFFFF7A21),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Pinjam'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 }

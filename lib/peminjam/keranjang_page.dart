@@ -14,6 +14,7 @@ class KeranjangPage extends StatefulWidget {
 class _KeranjangPageState extends State<KeranjangPage> {
   final SupabaseClient supabase = Supabase.instance.client;
   bool _isLoading = false;
+  
 
   Future<void> _processCheckout() async {
     if (widget.keranjangItems.isEmpty) return;
@@ -58,8 +59,22 @@ class _KeranjangPageState extends State<KeranjangPage> {
     }
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
+    // Jika kosong, tampilkan desain "Keranjang Kosong" kamu
+    if (widget.keranjangItems.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shopping_basket_rounded, size: 100, color: Colors.orange.shade200),
+            const SizedBox(height: 20),
+            const Text("Keranjang kosong,", style: TextStyle(fontSize: 18, color: Colors.grey)),
+            const Text("belum ada alat yang dipilih", style: TextStyle(fontSize: 18, color: Colors.grey)),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFFFF5EB),
       appBar: AppBar(title: const Text('Keranjang Pinjam'), backgroundColor: const Color(0xFFFFE5D1)),

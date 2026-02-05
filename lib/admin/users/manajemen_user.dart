@@ -18,7 +18,9 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
   final SupabaseClient supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _filteredUsers = []; // Tambahkan ini
   bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -31,16 +33,37 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
     try {
       final data = await supabase
           .from('users')
-          .select()
+          .select('id, username, email, role')
           .order('username', ascending: true);
 
       setState(() {
         _users = List<Map<String, dynamic>>.from(data);
+        _filteredUsers = _users; // Defaultnya tampilkan semua
         _isLoading = false;
       });
     } catch (e) {
+      print("Error fetch: $e");
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _runFilter(String enteredKeyword) {
+    List<Map<String, dynamic>> results = [];
+    if (enteredKeyword.isEmpty) {
+      results = _users;
+    } else {
+      results = _users
+          .where(
+            (user) => user["username"].toString().toLowerCase().contains(
+              enteredKeyword.toLowerCase(),
+            ),
+          )
+          .toList();
+    }
+
+    setState(() {
+      _filteredUsers = results;
+    });
   }
 
   @override
@@ -107,14 +130,17 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                         ? Center(
                             child: CircularProgressIndicator(color: orange),
                           )
-                        : _users.isEmpty
-                        ? const Center(child: Text("Tidak ada data user"))
+                        : _filteredUsers
+                              .isEmpty // Gunakan filteredUsers
+                        ? const Center(child: Text("Data tidak ditemukan"))
                         : ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _users.length,
+                            itemCount:
+                                _filteredUsers.length, // Gunakan filteredUsers
                             itemBuilder: (context, index) {
-                              final user = _users[index];
+                              final user =
+                                  _filteredUsers[index]; // Gunakan filteredUsers
                               return _buildUserCard(user);
                             },
                           ),
@@ -140,7 +166,11 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(color: orange.withOpacity(0.5)),
                 ),
+                // Di dalam _buildTopActions() -> TextField
                 child: TextField(
+                  controller: _searchController, // Tambahkan controller
+                  onChanged: (value) =>
+                      _runFilter(value), // Tambahkan onChanged
                   decoration: InputDecoration(
                     hintText: 'Cari Username',
                     hintStyle: TextStyle(color: orange.withOpacity(0.5)),
@@ -148,6 +178,16 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                       Icons.search,
                       color: orange.withOpacity(0.5),
                     ),
+                    // Tambahkan tombol hapus (X) jika teks tidak kosong
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: orange),
+                            onPressed: () {
+                              _searchController.clear();
+                              _runFilter('');
+                            },
+                          )
+                        : null,
                     border: InputBorder.none,
                   ),
                 ),
@@ -324,8 +364,8 @@ class _ManajemenUserPageState extends State<ManajemenUserPage> {
                             ),
                           );
                         }
-                        
-                        _fetchUsers(); 
+
+                        _fetchUsers();
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
