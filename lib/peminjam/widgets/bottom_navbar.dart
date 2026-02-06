@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class PeminjamNavbar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
-  final int jumlahKeranjang; // Pastikan ini digunakan
+  final int jumlahKeranjang;
 
   const PeminjamNavbar({
     super.key,
@@ -14,72 +14,87 @@ class PeminjamNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cek apakah halaman keranjang (index 4) sedang aktif
+    bool isCartActive = currentIndex == 4;
+
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
       children: [
         BottomNavigationBar(
-          currentIndex: currentIndex > 3 ? 0 : currentIndex, // Agar tidak error jika index 4 (keranjang)
+          // Jika index 4, kita set -1 agar tidak ada item navbar bawah yang terlihat terpilih
+          // Atau tetap gunakan logika kamu tapi pastikan label tetap konsisten
+          currentIndex: currentIndex > 3 ? 0 : currentIndex, 
           onTap: onTap,
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFFFF7A21),
+          selectedItemColor: isCartActive ? Colors.grey : const Color(0xFFFF7A21),
           unselectedItemColor: Colors.grey,
+          showSelectedLabels: !isCartActive, // Sembunyikan label pilih jika di keranjang
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Dashboard'),
-            BottomNavigationBarItem(icon: Icon(Icons.work_outline), label: 'Daftar Alat'),
-            BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'Peminjaman'),
-            BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Pengembalian'),
+            BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.work_outline), label: 'Alat'),
+            // Spacer untuk memberi ruang pada tombol keranjang di tengah
+            BottomNavigationBarItem(icon: SizedBox(width: 40), label: ''), 
+            BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'Pinjam'),
+            BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Kembali'),
           ],
         ),
-        // Tombol Keranjang Orange dengan Badge
+        // Tombol Keranjang Floating
         Positioned(
           top: -30,
           child: GestureDetector(
-            onTap: () => onTap(4), 
+            onTap: () => onTap(4), // Menuju KeranjangPage
             child: Stack(
               alignment: Alignment.topRight,
               children: [
-                Container(
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   width: 65,
                   height: 65,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFE5D1),
+                    // Beri warna lebih pekat jika sedang aktif/terpilih
+                    color: isCartActive ? const Color(0xFFFF7A21) : const Color(0xFFFFE5D1),
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFF7A21), width: 2),
+                    border: Border.all(
+                      color: const Color(0xFFFF7A21), 
+                      width: 2
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
+                        color: const Color(0xFFFF7A21).withOpacity(0.3),
+                        blurRadius: isCartActive ? 15 : 8,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.shopping_basket_outlined,
                     size: 35,
-                    color: Color(0xFFFF7A21),
+                    // Warna icon kontras jika aktif
+                    color: isCartActive ? Colors.white : const Color(0xFFFF7A21),
                   ),
                 ),
-                // Bulatan Angka (Badge)
+                // Badge Angka
                 if (jumlahKeranjang > 0)
                   Positioned(
                     right: 0,
                     top: 0,
                     child: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Colors.red,
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                       ),
                       constraints: const BoxConstraints(
-                        minWidth: 22,
-                        minHeight: 22,
+                        minWidth: 24,
+                        minHeight: 24,
                       ),
                       child: Text(
                         '$jumlahKeranjang',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
