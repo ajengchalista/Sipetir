@@ -1,34 +1,281 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
-
-class PengembalianPage extends StatelessWidget {
+class PengembalianPage extends StatefulWidget {
   const PengembalianPage({super.key});
+
+  @override
+  State<PengembalianPage> createState() => _PengembalianPageState();
+}
+
+class _PengembalianPageState extends State<PengembalianPage> {
+  final SupabaseClient supabase = Supabase.instance.client;
+  String selectedKondisi = 'Baik';
+
+  // Fungsi konfirmasi pengembalian ke database
+  Future<void> _processSimpanPengembalian(String pinjamId, String kondisi, DateTime waktuKembali, int denda) async {
+    try {
+      // 1. Tambahkan ke tabel pengembalian
+      await supabase.from('pengembalian').insert({
+        'pinjam_id': pinjamId,
+        'tanggal_kembali_asli': waktuKembali.toIso8601String(),
+        'kondisi_saat_dikembalikan': kondisi.toLowerCase(),
+        'denda': denda,
+      });
+
+      // 2. Update status peminjaman jadi disetujui (selesai)
+      await supabase
+          .from('peminjaman')
+          .update({'status': 'disetujui'})
+          .eq('pinjam_id', pinjamId);
+
+      if (mounted) {
+        Navigator.pop(context); // Tutup dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pengembalian Berhasil Dikonfirmasi'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // DIALOG KONFIRMASI DENGAN INPUT MANUAL & AUTO CALCULATE
+  void _showKonfirmasiDialog(Map<String, dynamic> data) {
+    DateTime deadline = DateTime.parse(data['tanggal_kembali']);
+    DateTime inputTanggal = DateTime.now();
+    TimeOfDay inputJam = TimeOfDay.now();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // Gabungkan tanggal dan jam input
+            DateTime waktuPengembalian = DateTime(
+              inputTanggal.year, inputTanggal.month, inputTanggal.day,
+              inputJam.hour, inputJam.minute,
+            );
+
+            // Hitung Keterlambatan
+            Duration selisih = waktuPengembalian.difference(deadline);
+            int menitTerlambat = selisih.inMinutes > 0 ? selisih.inMinutes : 0;
+            int jamTerlambat = (menitTerlambat / 60).ceil();
+            
+            // Hitung Denda (Contoh: Rp 5.000 per jam)
+            int tarifPerJam = 5000;
+            int totalDenda = jamTerlambat * tarifPerJam;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Konfirmasi\nPengembalian',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21)),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // INPUT TANGGAL MANUAL
+                    const Text('Tgl & Jam Kembali', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: inputTanggal,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2101),
+                              );
+                              if (picked != null) setDialogState(() => inputTanggal = picked);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFDECE2),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: const Color(0xFFFF7A21)),
+                              ),
+                              child: Text(DateFormat('dd/MM/yyyy').format(inputTanggal)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: inputJam,
+                              );
+                              if (picked != null) setDialogState(() => inputJam = picked);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFDECE2),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: const Color(0xFFFF7A21)),
+                              ),
+                              child: Text(inputJam.format(context)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 15),
+                    const Text('Kondisi', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedKondisi,
+                      decoration: InputDecoration(
+                        fillColor: const Color(0xFFFDECE2),
+                        filled: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Color(0xFFFF7A21)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Color(0xFFFF7A21)),
+                        ),
+                      ),
+                      items: ['Baik', 'Rusak', 'Hilang'].map((String value) {
+                        return DropdownMenuItem<String>(value: value, child: Text(value));
+                      }).toList(),
+                      onChanged: (val) => setState(() => selectedKondisi = val!),
+                    ),
+
+                    const SizedBox(height: 20),
+                    
+                    // AUTO CALCULATED BOX
+                    Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFFFB385)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Auto Calculated', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: menitTerlambat > 0 ? const Color(0xFFFF7A21) : Colors.green, 
+                                  borderRadius: BorderRadius.circular(10)
+                                ),
+                                child: Text(
+                                  menitTerlambat > 0 ? 'Terlambat' : 'Tepat Waktu', 
+                                  style: const TextStyle(color: Colors.white, fontSize: 10)
+                                ),
+                              )
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Terlambat (jam)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                  Text('$jamTerlambat Jam', style: const TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Denda /Jam', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                  Text(NumberFormat.currency(locale: 'id', symbol: '', decimalDigits: 0).format(tarifPerJam), style: const TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Total Denda', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                              Text(
+                                NumberFormat.currency(locale: 'id', symbol: 'Rp. ', decimalDigits: 0).format(totalDenda), 
+                                style: const TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold)
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => _processSimpanPengembalian(data['pinjam_id'], selectedKondisi, waktuPengembalian, totalDenda),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF7A21),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                        ),
+                        child: const Text('Simpan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- JUDUL HALAMAN ---
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
           child: Text(
             'Daftar Pengembalian',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFFF7A21),
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21)),
           ),
         ),
-
-        // --- LIST CARD PENGEMBALIAN ---
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: 4, // Sesuaikan dengan jumlah data
-            itemBuilder: (context, index) {
-              return _buildReturnCard();
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: supabase
+                .from('peminjaman')
+                .stream(primaryKey: ['pinjam_id'])
+                .eq('status', 'dikembalikan')
+                .order('tanggal_pinjam'),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text("Tidak ada data pengembalian"));
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: snapshot.data!.length,
+                itemBuilder: (context, index) => _buildReturnCard(snapshot.data![index]),
+              );
             },
           ),
         ),
@@ -36,128 +283,101 @@ class PengembalianPage extends StatelessWidget {
     );
   }
 
-  // --- WIDGET HELPER: CARD PENGEMBALIAN (100% MIRIP GAMBAR) ---
-  Widget _buildReturnCard() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFB385)), // Border krem tua
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row Profil (Avatar, Nama, Kelas, Tanggal)
-          Row(
-            children: [
-              Container(
-                width: 45,
-                height: 45,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFE5D1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Text(
-                    'AF',
-                    style: TextStyle(
-                      color: Color(0xFFFF7A21),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Kun Fayakun',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold, 
-                        fontSize: 16,
-                        color: Color(0xFF4A4A4A),
-                      ),
-                    ),
-                    Text(
-                      'XII',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              const Text(
-                '22 Jan 2026',
-                style: TextStyle(color: Colors.grey, fontSize: 11),
+  Widget _buildReturnCard(Map<String, dynamic> data) {
+    String tgl = data['tanggal_pinjam'] != null 
+        ? DateFormat('dd MMM yyyy').format(DateTime.parse(data['tanggal_pinjam'])) 
+        : '-';
+
+    return FutureBuilder(
+      future: Future.wait([
+        supabase.from('users').select('username').eq('id', data['user_id']).single(),
+        supabase.from('detail_peminjaman').select('Alat(nama_barang)').eq('pinjam_id', data['pinjam_id']).maybeSingle(),
+      ]),
+      builder: (context, AsyncSnapshot<List<dynamic>> subSnapshot) {
+        if (!subSnapshot.hasData) return const SizedBox(height: 100);
+
+        final userData = subSnapshot.data![0] as Map<String, dynamic>;
+        final detailData = subSnapshot.data![1] as Map<String, dynamic>?;
+
+        String userName = userData['username'] ?? 'User';
+        String namaAlat = (detailData != null && detailData['Alat'] != null) 
+            ? detailData['Alat']['nama_barang'] 
+            : 'Barang tidak ditemukan';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFFFB385)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: 15),
-
-          // Container Nama Alat (Orange Muda)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE5D1),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Seragam APD K3',
-                  style: TextStyle(
-                    color: Color(0xFFFF7A21),
-                    fontWeight: FontWeight.bold,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 45, height: 45,
+                    decoration: const BoxDecoration(color: Color(0xFFFFE5D1), shape: BoxShape.circle),
+                    child: Center(
+                      child: Text(
+                        userName.substring(0, userName.length >= 2 ? 2 : 1).toUpperCase(),
+                        style: const TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Color(0xFFFF7A21),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 15),
-
-          // Tombol Konfirmasi (Orange Pekat)
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                // Tambahkan logika konfirmasi di sini
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF7A21),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                elevation: 0,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4A4A4A))),
+                        Text(data['tingkatan_kelas'] ?? '-', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  Text(tgl, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                ],
               ),
-              child: const Text(
-                'Konfirmasi Pengembalian',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              const SizedBox(height: 15),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                decoration: BoxDecoration(color: const Color(0xFFFFE5D1), borderRadius: BorderRadius.circular(15)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(namaAlat, style: const TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold)),
+                    const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFFF7A21)),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(height: 15),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _showKonfirmasiDialog(data), 
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF7A21),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    elevation: 0,
+                  ),
+                  child: const Text('Konfirmasi Pengembalian', 
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

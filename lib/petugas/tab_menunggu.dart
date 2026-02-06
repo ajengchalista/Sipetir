@@ -7,7 +7,7 @@ class TabMenunggu extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: const EdgeInsets.all(20),
-      itemCount: 5, // Ganti dengan jumlah data dari database nanti
+      itemCount: 5,
       itemBuilder: (context, index) {
         return _buildCardPending();
       },

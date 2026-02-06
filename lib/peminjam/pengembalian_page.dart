@@ -24,7 +24,7 @@ class _PengembalianPageState extends State<PengembalianPage> {
     }
   }
 
-  // Fungsi Inti: Mengubah status menjadi 'dikembalikan'
+  // Fungsi Inti: Mengubah status menjadi 'dikembalikan' (Menunggu konfirmasi petugas)
   Future<void> _prosesKembalikan(String pinjamId, List details) async {
     setState(() => _isProcessing = true);
     try {
@@ -82,7 +82,7 @@ class _PengembalianPageState extends State<PengembalianPage> {
         ),
         Expanded(
           child: StreamBuilder<List<Map<String, dynamic>>>(
-            // Mengambil peminjaman milik user yang statusnya 'disetujui' (sedang dipinjam)
+            // MENGAMBIL DATA: 'disetujui' (dipinjam), 'dikembalikan' (nunggu petugas), 'kembali' (selesai)
             stream: supabase
                 .from('peminjaman')
                 .stream(primaryKey: ['pinjam_id'])
@@ -93,15 +93,17 @@ class _PengembalianPageState extends State<PengembalianPage> {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              // Filter hanya status 'disetujui' (untuk pengembalian)
+              // Filter status agar yang muncul hanya proses pengembalian saja
               final listPinjam = snapshot.data
-                      ?.where((item) => item['status'] == 'disetujui')
-                      .toList() ??
-                  [];
+                      ?.where((item) => 
+                        item['status'] == 'disetujui' || 
+                        item['status'] == 'dikembalikan' || 
+                        item['status'] == 'kembali')
+                      .toList() ?? [];
 
               if (listPinjam.isEmpty) {
                 return const Center(
-                  child: Text("Tidak ada alat yang perlu dikembalikan."),
+                  child: Text("Tidak ada alat dalam proses pengembalian."),
                 );
               }
 
@@ -111,7 +113,6 @@ class _PengembalianPageState extends State<PengembalianPage> {
                 itemBuilder: (context, index) {
                   final item = listPinjam[index];
                   
-                  // Kita butuh FutureBuilder kecil untuk mengambil nama alat dari detail_peminjaman
                   return FutureBuilder<List<Map<String, dynamic>>>(
                     future: supabase.from('detail_peminjaman').select('''
                           barang_id,
@@ -128,6 +129,11 @@ class _PengembalianPageState extends State<PengembalianPage> {
                           ? details[0]['Alat']['kode_alat'] 
                           : "-";
 
+                      // Logika Penentuan Label Status
+                      String labelStatus = "DIPINJAM";
+                      if(item['status'] == 'dikembalikan') labelStatus = "MENUNGGU KONFIRMASI";
+                      if(item['status'] == 'kembali') labelStatus = "SUDAH KEMBALI";
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 20),
                         child: _buildReturnCard(
@@ -136,7 +142,7 @@ class _PengembalianPageState extends State<PengembalianPage> {
                           code: kodeAlat,
                           borrowDate: _formatDateTime(item['tanggal_pinjam']),
                           returnDate: _formatDateTime(item['tanggal_kembali']),
-                          status: 'DIPINJAM',
+                          status: labelStatus,
                           details: details,
                         ),
                       );
@@ -160,6 +166,9 @@ class _PengembalianPageState extends State<PengembalianPage> {
     required String status,
     required List details,
   }) {
+    // Tombol hanya aktif jika statusnya masih 'DIPINJAM'
+    bool isStillBorrowed = status == "DIPINJAM";
+
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -196,14 +205,14 @@ class _PengembalianPageState extends State<PengembalianPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3E0),
+                  color: status == "SUDAH KEMBALI" ? Colors.green.shade50 : const Color(0xFFFFF3E0),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFF7A21).withOpacity(0.5)),
+                  border: Border.all(color: status == "SUDAH KEMBALI" ? Colors.green : const Color(0xFFFF7A21).withOpacity(0.5)),
                 ),
                 child: Text(
                   status,
-                  style: const TextStyle(
-                    color: Color(0xFFFF7A21),
+                  style: TextStyle(
+                    color: status == "SUDAH KEMBALI" ? Colors.green : const Color(0xFFFF7A21),
                     fontWeight: FontWeight.bold,
                     fontSize: 10,
                   ),
@@ -214,26 +223,38 @@ class _PengembalianPageState extends State<PengembalianPage> {
           const SizedBox(height: 15),
           _buildDateRow(Icons.calendar_today_outlined, 'Tgl Pinjam : ', borrowDate, Colors.black),
           const SizedBox(height: 5),
-          _buildDateRow(Icons.access_time_filled, 'Tgl Kembali : ', returnDate, Colors.red),
+          _buildDateRow(Icons.access_time_filled, 'Tgl Kembali : ', returnDate, isStillBorrowed ? Colors.red : Colors.grey),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 45,
-            child: ElevatedButton(
-              onPressed: _isProcessing ? null : () => _prosesKembalikan(pinjamId, details),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF7A21),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 5,
+          
+          // Tombol Ajukan hanya tampil/aktif jika statusnya masih DIPINJAM
+          if (isStillBorrowed)
+            SizedBox(
+              width: double.infinity,
+              height: 45,
+              child: ElevatedButton(
+                onPressed: _isProcessing ? null : () => _prosesKembalikan(pinjamId, details),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF7A21),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 5,
+                ),
+                child: _isProcessing
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Ajukan Pengembalian',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
               ),
-              child: _isProcessing
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      'Ajukan Pengembalian',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
+            )
+          else
+            const SizedBox(
+              width: double.infinity,
+              child: Text(
+                "Proses pengembalian selesai",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+              ),
             ),
-          ),
         ],
       ),
     );

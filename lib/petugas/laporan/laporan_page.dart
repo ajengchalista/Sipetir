@@ -1,22 +1,165 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
-class LaporanPage extends StatelessWidget {
+class LaporanPage extends StatefulWidget {
   const LaporanPage({super.key});
+
+  @override
+  State<LaporanPage> createState() => _LaporanPageState();
+}
+
+class _LaporanPageState extends State<LaporanPage> {
+  final SupabaseClient supabase = Supabase.instance.client;
+
+  // State untuk filter
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String? _selectedKategori;
+  String? _selectedStatus;
+  List<Map<String, dynamic>> _kategoriList = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchKategori();
+  }
+
+  // Ambil daftar kategori untuk dropdown
+  Future<void> _fetchKategori() async {
+    try {
+      final data = await supabase.from('kategori').select();
+      setState(() {
+        _kategoriList = List<Map<String, dynamic>>.from(data);
+      });
+    } catch (e) {
+      debugPrint('Error fetch kategori: $e');
+    }
+  }
+
+  // Fungsi untuk memilih tanggal
+  Future<void> _selectDate(BuildContext context, bool isStart) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) _startDate = picked; else _endDate = picked;
+      });
+    }
+  }
+
+  // LOGIKA UTAMA: Query Supabase & Generate PDF
+  Future<void> _generatePdfReport() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Membangun Query
+      var query = supabase.from('peminjaman').select('''
+        kode_peminjaman,
+        tanggal_pinjam,
+        tanggal_kembali,
+        status,
+        tingkatan_kelas,
+        users(username),
+        detail_peminjaman(
+          Alat(nama_barang, kategori_id)
+        )
+      ''');
+
+      // 2. Terapkan Filter
+      if (_startDate != null) {
+        query = query.gte('tanggal_pinjam', _startDate!.toIso8601String());
+      }
+      if (_endDate != null) {
+        query = query.lte('tanggal_pinjam', _endDate!.toIso8601String());
+      }
+      if (_selectedStatus != null) {
+        query = query.eq('status', _selectedStatus!.toLowerCase());
+      }
+
+      final List<dynamic> data = await query;
+
+      // 3. Filter Client-side untuk Kategori (karena nested join cukup kompleks)
+      var filteredData = data;
+      if (_selectedKategori != null) {
+        filteredData = data.where((item) {
+          final details = item['detail_peminjaman'] as List;
+          return details.any((d) => d['Alat']['kategori_id'] == _selectedKategori);
+        }).toList();
+      }
+
+      if (filteredData.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak ada data untuk periode/filter ini')),
+          );
+        }
+        return;
+      }
+
+      // 4. Proses PDF
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return [
+              pw.Header(
+                level: 0,
+                child: pw.Text('LAPORAN PEMINJAMAN ALAT', 
+                  style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Text('Periode: ${_startDate != null ? DateFormat('dd/MM/yyyy').format(_startDate!) : '-'} s/d ${_endDate != null ? DateFormat('dd/MM/yyyy').format(_endDate!) : '-'}'),
+              pw.SizedBox(height: 20),
+              pw.TableHelper.fromTextArray(
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                headers: ['Kode', 'Peminjam', 'Barang', 'Tgl Pinjam', 'Status'],
+                data: filteredData.map((item) {
+                  final details = item['detail_peminjaman'] as List;
+                  final namaBarang = details.isNotEmpty ? details[0]['Alat']['nama_barang'] : '-';
+                  return [
+                    item['kode_peminjaman'] ?? '-',
+                    item['users']['username'] ?? '-',
+                    namaBarang,
+                    DateFormat('dd/MM/yy').format(DateTime.parse(item['tanggal_pinjam'])),
+                    item['status'].toString().toUpperCase(),
+                  ];
+                }).toList(),
+              ),
+            ];
+          },
+        ),
+      );
+
+      // 5. Tampilkan Preview / Download
+      await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+
+    } catch (e) {
+      debugPrint('Error PDF: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF5EB), // Background cream konsisten
+      backgroundColor: const Color(0xFFFFF5EB),
       body: Column(
         children: [
-          // HEADER MELENGKUNG (Sinkron dengan Dashboard)
+          // HEADER
           Container(
-            padding: const EdgeInsets.only(
-              top: 60,
-              left: 25,
-              right: 25,
-              bottom: 30,
-            ),
+            padding: const EdgeInsets.only(top: 60, left: 25, right: 25, bottom: 30),
             decoration: const BoxDecoration(
               color: Color(0xFFF47521),
               borderRadius: BorderRadius.only(
@@ -28,60 +171,50 @@ class LaporanPage extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () =>
-                      Navigator.pop(context), // Fungsi kembali ke Dashboard
+                  onPressed: () => Navigator.pop(context),
                 ),
                 const SizedBox(width: 10),
                 const Text(
                   'Laporan',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
           ),
 
-          // CONTENT (Full Code Form Anda)
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Judul Laporan
                   const Text(
-                    'Form Laporan',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFFF7A21),
-                    ),
+                    'Form Filter Laporan',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21)),
                   ),
                   const SizedBox(height: 20),
 
-                  // Card Form Laporan
+                  // CARD FORM
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1E6), // Theme krem
+                      color: const Color(0xFFFFF1E6),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: const Color(0xFFFFB385)),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildLabel('Jenis Laporan'),
-                        _buildDropdownField('Pilih Jenis Laporan'),
+                        _buildLabel('Status Peminjaman'),
+                        _buildDropdownField(
+                          hint: 'Pilih Status',
+                          value: _selectedStatus,
+                          items: ['Disetujui', 'Dipinjam', 'Dikembalikan', 'Ditolak'],
+                          onChanged: (val) => setState(() => _selectedStatus = val),
+                        ),
                         const SizedBox(height: 15),
 
                         Row(
@@ -90,8 +223,8 @@ class LaporanPage extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildLabel('Tgl Pinjam'),
-                                  _buildDateField(),
+                                  _buildLabel('Tgl Mulai'),
+                                  _buildDateField(_startDate, () => _selectDate(context, true)),
                                 ],
                               ),
                             ),
@@ -100,8 +233,8 @@ class LaporanPage extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildLabel('Tgl Kembali'),
-                                  _buildDateField(),
+                                  _buildLabel('Tgl Akhir'),
+                                  _buildDateField(_endDate, () => _selectDate(context, false)),
                                 ],
                               ),
                             ),
@@ -110,46 +243,42 @@ class LaporanPage extends StatelessWidget {
                         const SizedBox(height: 15),
 
                         _buildLabel('Kategori Alat'),
-                        _buildDropdownField('Pilih Kategori'),
-                        const SizedBox(height: 15),
-
-                        _buildLabel('Status'),
-                        _buildDropdownField('Pilih Status'),
+                        _buildDropdownField(
+                          hint: 'Pilih Kategori',
+                          value: _selectedKategori,
+                          items: _kategoriList.map((e) => e['nama_kategori'].toString()).toList(),
+                          onChanged: (val) {
+                            final cat = _kategoriList.firstWhere((e) => e['nama_kategori'] == val);
+                            setState(() => _selectedKategori = cat['kategori_id']);
+                          },
+                        ),
                       ],
                     ),
                   ),
 
                   const SizedBox(height: 30),
 
-                  // Tombol Cetak Sekarang
+                  // TOMBOL CETAK
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Logika cetak
-                      },
-                      icon: const Icon(Icons.print, color: Colors.white),
-                      label: const Text(
-                        'Cetak Sekarang',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                      onPressed: _isLoading ? null : _generatePdfReport,
+                      icon: _isLoading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.print, color: Colors.white),
+                      label: Text(
+                        _isLoading ? 'Memproses...' : 'Cetak Sekarang (PDF)',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF7A21),
                         padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         elevation: 0,
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 100,
-                  ), // Space agar tidak tertutup navbar
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -159,22 +288,23 @@ class LaporanPage extends StatelessWidget {
     );
   }
 
-  // Widget Helper Anda (Tetap Sesuai)
+  // WIDGET HELPERS
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Color(0xFF4A4A4A),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(color: Color(0xFF4A4A4A), fontSize: 14, fontWeight: FontWeight.w500),
       ),
     );
   }
 
-  Widget _buildDropdownField(String hint) {
+  Widget _buildDropdownField({
+    required String hint, 
+    String? value, 
+    required List<String> items, 
+    required Function(String?) onChanged
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
@@ -185,32 +315,38 @@ class LaporanPage extends StatelessWidget {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           isExpanded: true,
-          hint: Text(
-            hint,
-            style: const TextStyle(color: Colors.grey, fontSize: 13),
-          ),
+          value: items.contains(value) ? value : null, // Fix if category name not loaded yet
+          hint: Text(hint, style: const TextStyle(color: Colors.grey, fontSize: 13)),
           icon: const Icon(Icons.arrow_drop_down, color: Color(0xFFFF7A21)),
-          items: const [],
-          onChanged: (value) {},
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(value: item, child: Text(item));
+          }).toList(),
+          onChanged: onChanged,
         ),
       ),
     );
   }
 
-  Widget _buildDateField() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFB385)),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text('2026-01-30', style: TextStyle(fontSize: 13)), // Dummy date
-          Icon(Icons.calendar_today, size: 16, color: Color(0xFFFF7A21)),
-        ],
+  Widget _buildDateField(DateTime? date, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFFB385)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              date != null ? DateFormat('yyyy-MM-dd').format(date) : 'Pilih Tgl',
+              style: const TextStyle(fontSize: 13),
+            ),
+            const Icon(Icons.calendar_today, size: 16, color: Color(0xFFFF7A21)),
+          ],
+        ),
       ),
     );
   }

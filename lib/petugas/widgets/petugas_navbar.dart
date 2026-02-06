@@ -15,10 +15,8 @@ class PetugasBottomNavbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
-      // Logika OnTap diperbaiki di sini
       onTap: (index) {
         if (index == 3) {
-          // Jika tab Laporan (index 3) diklik, langsung pindah halaman
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const LaporanPage()),
