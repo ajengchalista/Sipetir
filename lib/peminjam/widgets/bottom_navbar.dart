@@ -35,15 +35,15 @@ class PeminjamNavbar extends StatelessWidget {
             BottomNavigationBarItem(icon: Icon(Icons.work_outline), label: 'Alat'),
             // Spacer untuk memberi ruang pada tombol keranjang di tengah
             BottomNavigationBarItem(icon: SizedBox(width: 40), label: ''), 
-            BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'Pinjam'),
-            BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Kembali'),
+            BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'Kembali'),
+            BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Pinjam'),
           ],
         ),
         // Tombol Keranjang Floating
         Positioned(
           top: -30,
           child: GestureDetector(
-            onTap: () => onTap(4), // Menuju KeranjangPage
+            onTap: () => onTap(2),
             child: Stack(
               alignment: Alignment.topRight,
               children: [

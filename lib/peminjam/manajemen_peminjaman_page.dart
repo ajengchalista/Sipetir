@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart'; // Pastikan sudah import ini
 
 class PeminjamanContentView extends StatelessWidget {
   const PeminjamanContentView({super.key});
+
+  // Fungsi pembantu untuk memformat string timestamp dari database
+  String _formatDateTime(String? dateTimeStr) {
+    if (dateTimeStr == null) return "-";
+    try {
+      DateTime dt = DateTime.parse(dateTimeStr);
+      // Format: dd-MM-yyyy, HH:mm (Contoh: 02-02-2026, 12:00)
+      return DateFormat('dd-MM-yyyy, HH:mm').format(dt);
+    } catch (e) {
+      return dateTimeStr;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +65,7 @@ class PeminjamanContentView extends StatelessWidget {
                   final item = listPeminjaman[index];
                   final details = item['detail_peminjaman'] as List;
                   
+                  // 1. HANYA AMBIL NAMA ALAT
                   String namaBarang = details.isNotEmpty 
                       ? details[0]['Alat']['nama_barang'] 
                       : "Alat Tidak Diketahui";
@@ -59,10 +73,6 @@ class PeminjamanContentView extends StatelessWidget {
                       ? details[0]['Alat']['kode_alat'] 
                       : "N/A";
 
-                  // AMBIL DATA SISWA
-                  String namaSiswa = item['nama_siswa'] ?? "Siswa";
-                  String kelas = item['tingkatan_kelas'] ?? "-";
-                  
                   String statusText = item['status'].toString();
                   Color statusColor = const Color(0xFFF47521); 
                   
@@ -70,12 +80,13 @@ class PeminjamanContentView extends StatelessWidget {
                   if (statusText == 'ditolak') statusColor = const Color(0xFFFF9999);
 
                   return _buildCard(
-                    "$namaBarang ($namaSiswa - $kelas)", // Gabungkan di Title
+                    namaBarang, // Judul hanya nama alat saja
                     kodeAlat,
                     statusText.toUpperCase(),
                     statusColor,
-                    item['tanggal_pinjam'],
-                    item['tanggal_kembali'],
+                    // 2. FORMAT TANGGAL & JAM
+                    _formatDateTime(item['tanggal_pinjam']),
+                    _formatDateTime(item['tanggal_kembali']),
                   );
                 },
               );
@@ -111,13 +122,14 @@ class PeminjamanContentView extends StatelessWidget {
                 title,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 4),
               Text(
                 'Kode Alat : $kode',
                 style: const TextStyle(color: Colors.grey, fontSize: 13),
               ),
               const SizedBox(height: 15),
               _buildRow(Icons.calendar_month_outlined, "Tgl Pinjam : ", tglP, Colors.orange),
-              const SizedBox(height: 5),
+              const SizedBox(height: 8),
               _buildRow(Icons.access_time, "Tgl Kembali : ", tglK, Colors.red),
             ],
           ),
@@ -148,7 +160,7 @@ class PeminjamanContentView extends StatelessWidget {
   Widget _buildRow(IconData icon, String label, String date, Color iconColor) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: iconColor),
+        Icon(icon, size: 16, color: iconColor),
         const SizedBox(width: 8),
         Text(label, style: const TextStyle(fontSize: 13)),
         Text(

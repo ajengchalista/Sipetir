@@ -60,10 +60,6 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
     });
   }
 
-  void _bersihkanKeranjang() {
-    setState(() => _keranjangItems.clear());
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,7 +91,7 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
       case 3:
         return const HeaderCustom(title: 'Pengembalian', subtitle: 'Peminjam');
       case 4:
-        return const HeaderCustom(title: 'Keranjang', subtitle: 'Siap Pinjam');
+        return const HeaderCustom(title: 'Peminjaman', subtitle: 'Siap Pinjam');
       default:
         return const HeaderCustom(title: 'Dashboard', subtitle: 'Peminjam');
     }
@@ -109,29 +105,24 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
       case 1:
         return DaftarAlatPage(onTambahKeranjang: _tambahKeKeranjang);
       case 2:
-        return const PeminjamanContentView();
-      case 3:
-        return const PengembalianPage();
-      case 4:
-        // Pastikan index 4 adalah index Keranjang di PeminjamNavbar kamu
         return KeranjangPage(
           keranjangItems: _keranjangItems,
           onClear: () {
             setState(() {
-              // Ganti listKeranjang menjadi _keranjangItems
               _keranjangItems.clear();
-
-              // Reset ke Dashboard agar Navbar kembali ke posisi awal
-              _currentIndex = 0;
+              _currentIndex = 4; // Ganti ke 2 agar ke Manajemen Peminjaman
             });
           },
         );
+      case 3:
+        return const PengembalianPage();
+      case 4:
+        return const PeminjamanContentView();
       default:
         return _buildMainDashboard();
     }
   }
 
-  // --- DASHBOARD UTAMA SESUAI GAMBAR ---
   Widget _buildMainDashboard() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 25),

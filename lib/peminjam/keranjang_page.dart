@@ -22,7 +22,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
 
   final TextEditingController _tglPinjamController = TextEditingController();
   final TextEditingController _tglKembaliController = TextEditingController();
-  
+
   // Controller Baru untuk Jam
   final TextEditingController _jamPinjamController = TextEditingController();
   final TextEditingController _jamKembaliController = TextEditingController();
@@ -41,7 +41,8 @@ class _KeranjangPageState extends State<KeranjangPage> {
     );
     if (picked != null) {
       setState(() {
-        controller.text = "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
+        controller.text =
+            "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
       });
     }
   }
@@ -76,113 +77,124 @@ class _KeranjangPageState extends State<KeranjangPage> {
   }
 
   Future<void> _processCheckout() async {
-  if (widget.keranjangItems.isEmpty) return;
-  
-  // Validasi semua field termasuk Jam
-  if (_tglPinjamController.text.isEmpty ||
-      _tglKembaliController.text.isEmpty ||
-      _jamPinjamController.text.isEmpty ||
-      _jamKembaliController.text.isEmpty ||
-      _selectedKelas == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Lengkapi form peminjaman!"), backgroundColor: Colors.orange),
-    );
-    return;
-  }
+    if (widget.keranjangItems.isEmpty) return;
 
-  setState(() => _isLoading = true);
-  try {
-    final userId = supabase.auth.currentUser!.id;
-
-    // MENGGABUNGKAN Tanggal dan Jam untuk format Timestamp
-    String fullPinjam = "${_tglPinjamController.text} ${_jamPinjamController.text}:00";
-    String fullKembali = "${_tglKembaliController.text} ${_jamKembaliController.text}:00";
-
-    // 1. Simpan ke tabel peminjaman (TANPA nama_siswa)
-    final peminjaman = await supabase.from('peminjaman').insert({
-      'user_id': userId,
-      'tanggal_pinjam': fullPinjam,
-      'tanggal_kembali': fullKembali,
-      'status': 'disetujui',
-      'tingkatan_kelas': _selectedKelas,
-    }).select().single();
-
-    final pinjamId = peminjaman['pinjam_id'];
-
-    final details = widget.keranjangItems.map((item) => {
-      'pinjam_id': pinjamId,
-      'barang_id': item['alat_id'], // Ini harus berisi UUID
-      'jumlah': 1,
-    }).toList();
-
-    await supabase.from('detail_peminjaman').insert(details);
-
-    // 3. Update status alat
-    for (var item in widget.keranjangItems) {
-      await supabase.from('Alat').update({'status_barang': 'dipinjam'})
-          .eq('alat_id', item['alat_id']);
-    }
-
-    if (mounted) _showSuccessDialog();
-  } catch (e) {
-    if (mounted) {
+    // Validasi semua field termasuk Jam
+    if (_tglPinjamController.text.isEmpty ||
+        _tglKembaliController.text.isEmpty ||
+        _jamPinjamController.text.isEmpty ||
+        _jamKembaliController.text.isEmpty ||
+        _selectedKelas == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text("Lengkapi form peminjaman!"),
+          backgroundColor: Colors.orange,
+        ),
       );
+      return;
     }
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
+
+    setState(() => _isLoading = true);
+    try {
+      final userId = supabase.auth.currentUser!.id;
+
+      // MENGGABUNGKAN Tanggal dan Jam untuk format Timestamp
+      String fullPinjam =
+          "${_tglPinjamController.text} ${_jamPinjamController.text}:00";
+      String fullKembali =
+          "${_tglKembaliController.text} ${_jamKembaliController.text}:00";
+
+      // 1. Simpan ke tabel peminjaman (TANPA nama_siswa)
+      // Cari bagian ini di fungsi _processCheckout
+      final peminjaman = await supabase
+          .from('peminjaman')
+          .insert({
+            'user_id': userId,
+            'tanggal_pinjam': fullPinjam,
+            'tanggal_kembali': fullKembali,
+            'status': 'menunggu',
+            'tingkatan_kelas': _selectedKelas,
+          })
+          .select()
+          .single();
+
+      final pinjamId = peminjaman['pinjam_id'];
+
+      final details = widget.keranjangItems
+          .map(
+            (item) => {
+              'pinjam_id': pinjamId,
+              'barang_id': item['alat_id'], // Ini harus berisi UUID
+              'jumlah': 1,
+            },
+          )
+          .toList();
+
+      await supabase.from('detail_peminjaman').insert(details);
+
+      // 3. Update status alat
+      for (var item in widget.keranjangItems) {
+        await supabase
+            .from('Alat')
+            .update({'status_barang': 'dipinjam'})
+            .eq('alat_id', item['alat_id']);
+      }
+
+      if (mounted) _showSuccessDialog();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
-}
 
   void _showSuccessDialog() {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle, color: Colors.green, size: 60),
-          const SizedBox(height: 20),
-          const Text(
-            "Peminjaman Diajukan",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            "Alat dan informasi Anda telah masuk ke riwayat peminjaman.",
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 25),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF7A21),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                // 1. Tutup dialog sukses
-                Navigator.of(context, rootNavigator: true).pop(); 
-                
-                // 2. Kosongkan list keranjang melalui callback dari parent
-                widget.onClear(); 
-                
-                // 3. Kembali ke halaman utama (Dashboard)
-                Navigator.of(context).pop(); 
-              },
-              child: const Text("OK", style: TextStyle(color: Colors.white)),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 60),
+            const SizedBox(height: 20),
+            const Text(
+              "Peminjaman Diajukan",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            const Text(
+              "Alat dan informasi Anda telah masuk ke riwayat peminjaman.",
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 25),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF7A21),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                // Di KeranjangPage, bagian _showSuccessDialog
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  widget.onClear();
+                },
+                child: const Text("OK", style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -379,8 +391,8 @@ class _KeranjangPageState extends State<KeranjangPage> {
           onTap: isDate
               ? () => _selectDate(context, controller)
               : isTime
-                  ? () => _selectTime(context, controller)
-                  : null,
+              ? () => _selectTime(context, controller)
+              : null,
           decoration: InputDecoration(
             hintText: "Pilih",
             suffixIcon: Icon(

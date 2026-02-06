@@ -1,16 +1,77 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
-class PengembalianPage extends StatelessWidget {
+class PengembalianPage extends StatefulWidget {
   const PengembalianPage({super.key});
 
   @override
+  State<PengembalianPage> createState() => _PengembalianPageState();
+}
+
+class _PengembalianPageState extends State<PengembalianPage> {
+  final SupabaseClient supabase = Supabase.instance.client;
+  bool _isProcessing = false;
+
+  // Fungsi format tanggal agar seragam
+  String _formatDateTime(String? dateTimeStr) {
+    if (dateTimeStr == null) return "-";
+    try {
+      DateTime dt = DateTime.parse(dateTimeStr);
+      return DateFormat('dd-MM-yyyy, HH:mm').format(dt);
+    } catch (e) {
+      return dateTimeStr;
+    }
+  }
+
+  // Fungsi Inti: Mengubah status menjadi 'dikembalikan'
+  Future<void> _prosesKembalikan(String pinjamId, List details) async {
+    setState(() => _isProcessing = true);
+    try {
+      // 1. Update status di tabel peminjaman
+      await supabase
+          .from('peminjaman')
+          .update({'status': 'dikembalikan'})
+          .eq('pinjam_id', pinjamId);
+
+      // 2. Update status barang di tabel Alat menjadi 'tersedia' kembali
+      for (var detail in details) {
+        final alatId = detail['barang_id'];
+        await supabase
+            .from('Alat')
+            .update({'status_barang': 'tersedia'})
+            .eq('alat_id', alatId);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Berhasil mengajukan pengembalian!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+    final userId = supabase.auth.currentUser!.id;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(20),
+          child: Text(
             'Informasi Pengembalian',
             style: TextStyle(
               fontSize: 24,
@@ -18,54 +79,96 @@ class PengembalianPage extends StatelessWidget {
               color: Color(0xFFFF7A21),
             ),
           ),
-          const SizedBox(height: 20),
-          // Card 1: Status Dipinjam
-          _buildReturnCard(
-            title: 'Conductivity Meter',
-            code: 'AL-006',
-            borrowDate: '26 Jan 2026',
-            returnDate: '26 Jan 2026',
-            status: 'Dipinjam',
-            statusColor: const Color(0xFFFF7A21),
-            statusBg: Colors.transparent,
+        ),
+        Expanded(
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            // Mengambil peminjaman milik user yang statusnya 'disetujui' (sedang dipinjam)
+            stream: supabase
+                .from('peminjaman')
+                .stream(primaryKey: ['pinjam_id'])
+                .eq('user_id', userId)
+                .order('tanggal_pinjam', ascending: false),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              // Filter hanya status 'disetujui' (untuk pengembalian)
+              final listPinjam = snapshot.data
+                      ?.where((item) => item['status'] == 'disetujui')
+                      .toList() ??
+                  [];
+
+              if (listPinjam.isEmpty) {
+                return const Center(
+                  child: Text("Tidak ada alat yang perlu dikembalikan."),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: listPinjam.length,
+                itemBuilder: (context, index) {
+                  final item = listPinjam[index];
+                  
+                  // Kita butuh FutureBuilder kecil untuk mengambil nama alat dari detail_peminjaman
+                  return FutureBuilder<List<Map<String, dynamic>>>(
+                    future: supabase.from('detail_peminjaman').select('''
+                          barang_id,
+                          Alat (nama_barang, kode_alat)
+                        ''').eq('pinjam_id', item['pinjam_id']),
+                    builder: (context, detailSnapshot) {
+                      if (!detailSnapshot.hasData) return const SizedBox();
+                      
+                      final details = detailSnapshot.data!;
+                      final namaAlat = details.isNotEmpty 
+                          ? details[0]['Alat']['nama_barang'] 
+                          : "Alat";
+                      final kodeAlat = details.isNotEmpty 
+                          ? details[0]['Alat']['kode_alat'] 
+                          : "-";
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: _buildReturnCard(
+                          pinjamId: item['pinjam_id'],
+                          title: namaAlat,
+                          code: kodeAlat,
+                          borrowDate: _formatDateTime(item['tanggal_pinjam']),
+                          returnDate: _formatDateTime(item['tanggal_kembali']),
+                          status: 'DIPINJAM',
+                          details: details,
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
           ),
-          const SizedBox(height: 20),
-          // Card 2: Status Terlambat
-          _buildReturnCard(
-            title: 'Conductivity Meter',
-            code: 'AL-006',
-            borrowDate: '26 Jan 2026',
-            returnDate: '26 Jan 2026',
-            status: 'Terlambat',
-            statusColor: Colors.red,
-            statusBg: const Color(0xFFFFC1C1),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildReturnCard({
+    required String pinjamId,
     required String title,
     required String code,
     required String borrowDate,
     required String returnDate,
     required String status,
-    required Color statusColor,
-    required Color statusBg,
+    required List details,
   }) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors
-            .white, // PERUBAHAN: Sekarang menggunakan warna putih agar sama dengan kartu peminjaman
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFFFB385)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              0.05,
-            ), // Shadow dibuat lebih halus sesuai UI dashboard
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -77,79 +180,58 @@ class PengembalianPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Kode Alat :  $code',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text('Kode Alat : $code', style: const TextStyle(color: Colors.black87)),
+                  ],
+                ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withOpacity(0.5)),
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFF7A21).withOpacity(0.5)),
                 ),
                 child: Text(
                   status,
-                  style: TextStyle(
-                    color: statusColor,
+                  style: const TextStyle(
+                    color: Color(0xFFFF7A21),
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 10,
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 15),
-          _buildDateRow(
-            Icons.calendar_today_outlined,
-            'Tgl Pinjam : ',
-            borrowDate,
-            Colors.black,
-          ),
+          _buildDateRow(Icons.calendar_today_outlined, 'Tgl Pinjam : ', borrowDate, Colors.black),
           const SizedBox(height: 5),
-          _buildDateRow(
-            Icons.access_time_filled,
-            'Tgl Kembali : ',
-            returnDate,
-            Colors.red,
-          ),
+          _buildDateRow(Icons.access_time_filled, 'Tgl Kembali : ', returnDate, Colors.red),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             height: 45,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: _isProcessing ? null : () => _prosesKembalikan(pinjamId, details),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF7A21),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 elevation: 5,
               ),
-              child: const Text(
-                'Ajukan Pengembalian',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+              child: _isProcessing
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      'Ajukan Pengembalian',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
             ),
           ),
         ],
@@ -157,21 +239,13 @@ class PengembalianPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDateRow(
-    IconData icon,
-    String label,
-    String date,
-    Color dateColor,
-  ) {
+  Widget _buildDateRow(IconData icon, String label, String date, Color dateColor) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: const Color(0xFFFF7A21)),
+        Icon(icon, size: 18, color: const Color(0xFFFF7A21)),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-        Text(
-          date,
-          style: TextStyle(color: dateColor, fontWeight: FontWeight.bold),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+        Text(date, style: TextStyle(color: dateColor, fontWeight: FontWeight.bold, fontSize: 13)),
       ],
     );
   }
