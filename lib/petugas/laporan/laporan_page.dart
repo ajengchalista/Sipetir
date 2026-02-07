@@ -16,7 +16,7 @@ class LaporanPage extends StatefulWidget {
 class _LaporanPageState extends State<LaporanPage> {
   final SupabaseClient supabase = Supabase.instance.client;
 
-  // State untuk filter
+  // State untuk filter - Default null artinya menampilkan semua data
   DateTime? _startDate;
   DateTime? _endDate;
   String? _selectedKategori;
@@ -62,7 +62,7 @@ class _LaporanPageState extends State<LaporanPage> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Membangun Query
+      // 1. Membangun Query Dasar
       var query = supabase.from('peminjaman').select('''
         kode_peminjaman,
         tanggal_pinjam,
@@ -75,25 +75,26 @@ class _LaporanPageState extends State<LaporanPage> {
         )
       ''');
 
-      // 2. Terapkan Filter
+      // 2. Terapkan Filter Secara Kondisional (Hanya jika tidak null / bukan 'Semua')
       if (_startDate != null) {
-        query = query.gte('tanggal_pinjam', _startDate!.toIso8601String());
+        query = query.gte('tanggal_pinjam', DateTime(_startDate!.year, _startDate!.month, _startDate!.day).toIso8601String());
       }
       if (_endDate != null) {
-        query = query.lte('tanggal_pinjam', _endDate!.toIso8601String());
+        // Set ke akhir hari (23:59:59) agar data hari tersebut ikut terbawa
+        query = query.lte('tanggal_pinjam', DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59).toIso8601String());
       }
-      if (_selectedStatus != null) {
+      if (_selectedStatus != null && _selectedStatus != 'Semua') {
         query = query.eq('status', _selectedStatus!.toLowerCase());
       }
 
-      final List<dynamic> data = await query;
+      final List<dynamic> data = await query.order('tanggal_pinjam', ascending: false);
 
-      // 3. Filter Client-side untuk Kategori (karena nested join cukup kompleks)
+      // 3. Filter Client-side untuk Kategori
       var filteredData = data;
-      if (_selectedKategori != null) {
+      if (_selectedKategori != null && _selectedKategori != 'Semua') {
         filteredData = data.where((item) {
           final details = item['detail_peminjaman'] as List;
-          return details.any((d) => d['Alat']['kategori_id'] == _selectedKategori);
+          return details.any((d) => d['Alat']['nama_barang'] == _selectedKategori);
         }).toList();
       }
 
@@ -119,7 +120,8 @@ class _LaporanPageState extends State<LaporanPage> {
                   style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
               ),
               pw.SizedBox(height: 10),
-              pw.Text('Periode: ${_startDate != null ? DateFormat('dd/MM/yyyy').format(_startDate!) : '-'} s/d ${_endDate != null ? DateFormat('dd/MM/yyyy').format(_endDate!) : '-'}'),
+              pw.Text('Periode: ${_startDate != null ? DateFormat('dd/MM/yyyy').format(_startDate!) : 'Semua'} s/d ${_endDate != null ? DateFormat('dd/MM/yyyy').format(_endDate!) : 'Semua'}'),
+              pw.Text('Status: ${_selectedStatus ?? 'Semua'} | Kategori: ${_selectedKategori ?? 'Semua'}'),
               pw.SizedBox(height: 20),
               pw.TableHelper.fromTextArray(
                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
@@ -210,10 +212,10 @@ class _LaporanPageState extends State<LaporanPage> {
                       children: [
                         _buildLabel('Status Peminjaman'),
                         _buildDropdownField(
-                          hint: 'Pilih Status',
+                          hint: 'Semua Status',
                           value: _selectedStatus,
-                          items: ['Disetujui', 'Dipinjam', 'Dikembalikan', 'Ditolak'],
-                          onChanged: (val) => setState(() => _selectedStatus = val),
+                          items: ['Semua', 'Menunggu', 'Dipinjam', 'Disetujui', 'Dikembalikan', 'Ditolak'],
+                          onChanged: (val) => setState(() => _selectedStatus = (val == 'Semua') ? null : val),
                         ),
                         const SizedBox(height: 15),
 
@@ -244,13 +246,10 @@ class _LaporanPageState extends State<LaporanPage> {
 
                         _buildLabel('Kategori Alat'),
                         _buildDropdownField(
-                          hint: 'Pilih Kategori',
+                          hint: 'Semua Kategori',
                           value: _selectedKategori,
-                          items: _kategoriList.map((e) => e['nama_kategori'].toString()).toList(),
-                          onChanged: (val) {
-                            final cat = _kategoriList.firstWhere((e) => e['nama_kategori'] == val);
-                            setState(() => _selectedKategori = cat['kategori_id']);
-                          },
+                          items: ['Semua', ..._kategoriList.map((e) => e['nama_kategori'].toString())],
+                          onChanged: (val) => setState(() => _selectedKategori = (val == 'Semua') ? null : val),
                         ),
                       ],
                     ),
@@ -315,7 +314,7 @@ class _LaporanPageState extends State<LaporanPage> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           isExpanded: true,
-          value: items.contains(value) ? value : null, // Fix if category name not loaded yet
+          value: value,
           hint: Text(hint, style: const TextStyle(color: Colors.grey, fontSize: 13)),
           icon: const Icon(Icons.arrow_drop_down, color: Color(0xFFFF7A21)),
           items: items.map((String item) {
@@ -341,7 +340,7 @@ class _LaporanPageState extends State<LaporanPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              date != null ? DateFormat('yyyy-MM-dd').format(date) : 'Pilih Tgl',
+              date != null ? DateFormat('dd/MM/yyyy').format(date) : 'Semua',
               style: const TextStyle(fontSize: 13),
             ),
             const Icon(Icons.calendar_today, size: 16, color: Color(0xFFFF7A21)),

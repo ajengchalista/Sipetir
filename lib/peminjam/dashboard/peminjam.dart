@@ -4,8 +4,8 @@ import 'package:sipetir/peminjam/daftar_alat_page.dart';
 import 'package:sipetir/peminjam/pengembalian_page.dart';
 import 'package:sipetir/widgets/header_custom.dart';
 import 'package:sipetir/peminjam/widgets/bottom_navbar.dart';
-import 'package:sipetir/peminjam/manajemen_peminjaman_page.dart';
-import '../keranjang_page.dart';
+import 'package:sipetir/peminjam/keranjang_page.dart';
+import '../halaman profil/profil_page.dart';
 
 class DashboardPeminjamPage extends StatefulWidget {
   const DashboardPeminjamPage({super.key});
@@ -17,25 +17,18 @@ class DashboardPeminjamPage extends StatefulWidget {
 class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
   int _currentIndex = 0;
   final SupabaseClient supabase = Supabase.instance.client;
-  final TextEditingController _searchController = TextEditingController();
 
+  // Data kategori statis (Bisa diganti dengan fetch dari table kategori jika perlu)
   final List<Map<String, String>> _alatList = [
-    {'title': 'Keselamatan Kerja (K3)', 'subtitle': '20 Alat'},
-    {'title': 'Alat Ukur Listrik', 'subtitle': '12 Alat'},
-    {'title': 'Peralatan Mekanik', 'subtitle': '8 Alat'},
-    {'title': 'Alat Analisis & Quality Check', 'subtitle': '15 Alat'},
+    {'title': 'Keselamatan Kerja (K3)', 'subtitle': 'Alat Perlindungan Diri'},
+    {'title': 'Alat Ukur Listrik', 'subtitle': 'Multimeter, Oscilloscope'},
+    {'title': 'Peralatan Mekanik', 'subtitle': 'Kunci Pas, Bor, Obeng'},
+    {'title': 'Alat Analisis & QC', 'subtitle': 'Alat Uji Mutu'},
   ];
 
-  List<Map<String, String>> _filteredAlatList = [];
   List<Map<String, dynamic>> _keranjangItems = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _filteredAlatList = List.from(_alatList);
-    _searchController.addListener(_onSearchChanged);
-  }
-
+  // Fungsi fetch data statistik
   Future<Map<String, int>> _getRealtimeStats() async {
     try {
       final userCount = await supabase.from('users').count(CountOption.exact);
@@ -46,19 +39,10 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
     }
   }
 
-  void _onSearchChanged() {
-    String query = _searchController.text.toLowerCase();
-    setState(() {
-      _filteredAlatList = _alatList
-          .where((alat) => alat['title']!.toLowerCase().contains(query))
-          .toList();
-    });
-  }
-
   void _tambahKeKeranjang(Map<String, dynamic> alat) {
     setState(() {
       bool sudahAda = _keranjangItems.any(
-        (item) => item['nama_barang'] == alat['nama_barang'],
+        (item) => item['alat_id'] == alat['alat_id'],
       );
       if (!sudahAda) {
         _keranjangItems.add(alat);
@@ -66,7 +50,12 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
           SnackBar(
             content: Text('${alat['nama_barang']} ditambah ke keranjang'),
             backgroundColor: const Color(0xFFFF7A21),
+            behavior: SnackBarBehavior.floating,
           ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Alat sudah ada di keranjang')),
         );
       }
     });
@@ -81,25 +70,56 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
         onTap: (index) => setState(() => _currentIndex = index),
         jumlahKeranjang: _keranjangItems.length,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBodyContent()),
-          ],
-        ),
+      body: Stack(
+        children: [
+          // Background & Content
+          Column(
+            children: [
+              _buildHeader(),
+              Expanded(child: _buildBodyContent()),
+            ],
+          ),
+          
+          // Tombol Profil (Overlay di atas Header)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            right: 20,
+            child: GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilPage()),
+              ),
+              child: Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)
+                  ],
+                ),
+                child: const Icon(Icons.person_outline, color: Color(0xFFFF7A21), size: 28),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
+    String title = 'Dashboard';
+    String subtitle = 'Peminjam';
+
     switch (_currentIndex) {
-      case 1: return const HeaderCustom(title: 'Daftar Alat', subtitle: 'Peminjam');
-      case 2: return const HeaderCustom(title: 'Keranjang', subtitle: 'Peminjam');
-      case 3: return const HeaderCustom(title: 'Pengembalian', subtitle: 'Peminjam');
-      case 4: return const HeaderCustom(title: 'Status Pinjam', subtitle: 'Riwayat');
-      default: return const HeaderCustom(title: 'Dashboard', subtitle: 'Peminjam');
+      case 1: title = 'Daftar Alat'; break;
+      case 2: title = 'Keranjang'; break;
+      case 3: title = 'Pengembalian'; break;
+      case 4: title = 'Status Pinjam'; subtitle = 'Riwayat'; break;
     }
+
+    return HeaderCustom(title: title, subtitle: subtitle);
   }
 
   Widget _buildBodyContent() {
@@ -112,7 +132,7 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
           onClear: () {
             setState(() {
               _keranjangItems.clear();
-              _currentIndex = 4;
+              _currentIndex = 4; // Pindah ke riwayat setelah checkout
             });
           },
         );
@@ -124,6 +144,7 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
 
   Widget _buildMainDashboard() {
     return RefreshIndicator(
+      color: const Color(0xFFFF7A21),
       onRefresh: () async => setState(() {}),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -145,18 +166,19 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
                 );
               },
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 35),
             const Text(
               'Kategori Alat',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21)),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21)),
             ),
             const SizedBox(height: 15),
             ListView.builder(
               shrinkWrap: true,
+              padding: EdgeInsets.zero,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _filteredAlatList.length,
+              itemCount: _alatList.length,
               itemBuilder: (context, index) {
-                return _buildCategoryCard(_filteredAlatList[index]['title']!);
+                return _buildCategoryCard(_alatList[index]['title']!, _alatList[index]['subtitle']!);
               },
             ),
             const SizedBox(height: 100),
@@ -169,24 +191,24 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
   Widget _buildStatCard(IconData icon, String value, String label) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFFFB385).withOpacity(0.5)),
+          border: Border.all(color: const Color(0xFFFFB385).withOpacity(0.3)),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFFFF7A21), size: 35),
+            Icon(icon, color: const Color(0xFFFF7A21), size: 30),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
-                Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
+                Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.grey)),
               ],
             ),
           ],
@@ -195,21 +217,20 @@ class _DashboardPeminjamPageState extends State<DashboardPeminjamPage> {
     );
   }
 
-  Widget _buildCategoryCard(String title) {
+  Widget _buildCategoryCard(String title, String sub) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFB385).withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFFFFB385).withOpacity(0.3)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFFF7A21)),
-        ],
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFFF7A21))),
+        subtitle: Text(sub, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFFFF7A21)),
+        onTap: () => setState(() => _currentIndex = 1), // Arahkan ke Daftar Alat
       ),
     );
   }
@@ -227,22 +248,18 @@ class PeminjamanContentView extends StatelessWidget {
     if (userId == null) return const Center(child: Text("Silakan login kembali"));
 
     return StreamBuilder<List<Map<String, dynamic>>>(
-      // Filter stream agar HANYA mengambil data milik user yang sedang login
       stream: supabase
           .from('peminjaman')
           .stream(primaryKey: ['pinjam_id'])
-          .eq('user_id', userId) 
-          .order('tanggal_pinjam'),
+          .eq('user_id', userId)
+          .order('tanggal_pinjam', ascending: false),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(color: Color(0xFFFF7A21)));
         }
         
         final data = snapshot.data ?? [];
-        
-        if (data.isEmpty) {
-          return const Center(child: Text("Belum ada riwayat peminjaman"));
-        }
+        if (data.isEmpty) return const Center(child: Text("Belum ada riwayat peminjaman"));
 
         return ListView.builder(
           padding: const EdgeInsets.all(20),
@@ -251,52 +268,52 @@ class PeminjamanContentView extends StatelessWidget {
             final item = data[index];
             final status = item['status'].toString().toLowerCase();
 
-            // Mengambil Nama User dari tabel users berdasarkan user_id
-            return FutureBuilder<Map<String, dynamic>>(
-              future: supabase.from('users').select('username').eq('id', userId).single(),
-              builder: (context, userSnapshot) {
-                String userName = userSnapshot.data?['username'] ?? 'Peminjam';
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 15),
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFFB385)),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5),
-                    ],
-                  ),
-                  child: Column(
+            return Container(
+              margin: const EdgeInsets.only(bottom: 15),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFFB385).withOpacity(0.5)),
+              ),
+              child: Column(
+                children: [
+                  Row(
                     children: [
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          backgroundColor: const Color(0xFFFFE5D1),
-                          child: Text(userName.substring(0,1).toUpperCase(), 
-                            style: const TextStyle(color: Color(0xFFFF7A21), fontWeight: FontWeight.bold)),
-                        ),
-                        title: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text("Kelas: ${item['tingkatan_kelas'] ?? '-'}"),
-                        trailing: _buildStatusIcon(status),
+                      CircleAvatar(
+                        backgroundColor: const Color(0xFFFFE5D1),
+                        child: const Icon(Icons.history, color: Color(0xFFFF7A21)),
                       ),
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("Status: ${item['status']}", 
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: status == 'disetujui' ? Colors.green : (status == 'ditolak' ? Colors.red : Colors.orange)
-                            )),
-                          Text(item['kode_peminjaman'] ?? '-', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                        ],
-                      )
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item['kode_peminjaman'] ?? 'No Code', 
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text("Kelas: ${item['tingkatan_kelas'] ?? '-'}", 
+                                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      _buildStatusBadge(status),
                     ],
                   ),
-                );
-              }
+                  const Divider(height: 25),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Status Akhir:", style: TextStyle(fontSize: 13, color: Colors.grey)),
+                      Text(item['status'].toString().toUpperCase(), 
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: _getStatusColor(status)
+                          )),
+                    ],
+                  )
+                ],
+              ),
             );
           },
         );
@@ -304,13 +321,22 @@ class PeminjamanContentView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusIcon(String status) {
-    if (status == 'disetujui') {
-      return const Icon(Icons.check_circle, color: Colors.green, size: 30);
+  Color _getStatusColor(String status) {
+    if (status == 'disetujui' || status == 'dikembalikan') return Colors.green;
+    if (status == 'ditolak') return Colors.red;
+    return Colors.orange;
+  }
+
+  Widget _buildStatusBadge(String status) {
+    IconData icon;
+    Color color;
+    if (status == 'disetujui' || status == 'dikembalikan') {
+      icon = Icons.check_circle; color = Colors.green;
     } else if (status == 'ditolak') {
-      return const Icon(Icons.cancel, color: Colors.red, size: 30);
+      icon = Icons.cancel; color = Colors.red;
     } else {
-      return const Icon(Icons.access_time_filled, color: Colors.orange, size: 30);
+      icon = Icons.access_time_filled; color = Colors.orange;
     }
+    return Icon(icon, color: color, size: 28);
   }
 }
